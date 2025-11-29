@@ -77,7 +77,7 @@ export function CreateSecretDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create New Secret</DialogTitle>
           <DialogDescription>
@@ -112,21 +112,34 @@ export function CreateSecretDialog({
                 <SelectItem value="ssh">SSH Key</SelectItem>
                 <SelectItem value="password">Password</SelectItem>
                 <SelectItem value="env_var">Environment Variable</SelectItem>
+                <SelectItem value="markdown">Markdown Note</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label htmlFor="value">Value *</Label>
-            <Input
-              id="value"
-              type="password"
-              value={formData.value}
-              onChange={(e) =>
-                setFormData({ ...formData, value: e.target.value })
-              }
-              placeholder="Secret value"
-            />
+            {formData.type === "markdown" ? (
+              <Textarea
+                id="value"
+                value={formData.value}
+                onChange={(e) =>
+                  setFormData({ ...formData, value: e.target.value })
+                }
+                placeholder="# My Secret Note\n\n- Item 1\n- Item 2"
+                className="font-mono min-h-[200px]"
+              />
+            ) : (
+              <Input
+                id="value"
+                type="password"
+                value={formData.value}
+                onChange={(e) =>
+                  setFormData({ ...formData, value: e.target.value })
+                }
+                placeholder="Secret value"
+              />
+            )}
           </div>
           <div>
             <Label htmlFor="description">Description</Label>
@@ -176,4 +189,3 @@ export function CreateSecretDialog({
     </Dialog>
   )
 }
-

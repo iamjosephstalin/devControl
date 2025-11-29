@@ -187,58 +187,125 @@ export function DashboardOverview({
         </Card>
       </div>
 
-      {/* Recent Projects */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Projects</CardTitle>
-          <CardDescription>Your most recently updated projects</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {projects.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No projects yet</p>
-          ) : (
-            <div className="space-y-3">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="flex items-center justify-between rounded-lg border p-4"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold font-mono">{project.title}</h3>
-                      <Badge
-                        className={
-                          statusColors[project.status] || statusColors.active
-                        }
-                      >
-                        {project.status}
-                      </Badge>
-                    </div>
-                    {project.description && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {project.description}
-                      </p>
-                    )}
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Updated {formatDate(project.updatedAt)}
-                    </p>
+      {/* All Projects */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold tracking-tight font-mono">All Projects</h2>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {projects.map((project) => {
+            let techStack = []
+            try {
+              techStack = JSON.parse(project.techStack || "[]")
+            } catch (e) {
+              techStack = project.techStack ? project.techStack.split(",") : []
+            }
+
+            let tags = []
+            try {
+              tags = JSON.parse(project.tags || "[]")
+            } catch (e) {
+              tags = project.tags ? project.tags.split(",") : []
+            }
+
+            const nextTask = project.tasks?.[0]
+
+            return (
+              <Card key={project.id} className="flex flex-col">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-lg font-mono truncate" title={project.title}>
+                      {project.title}
+                    </CardTitle>
+                    <Badge className={statusColors[project.status] || statusColors.active}>
+                      {project.status}
+                    </Badge>
                   </div>
-                  <Button variant="ghost" size="sm" asChild>
+                  <CardDescription className="line-clamp-2 min-h-[2.5rem]">
+                    {project.description || "No description provided"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-4">
+                  {/* Tech Stack & Tags */}
+                  <div className="flex flex-wrap gap-1">
+                    {techStack.slice(0, 3).map((tech: string, i: number) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {tech}
+                      </Badge>
+                    ))}
+                    {tags.slice(0, 2).map((tag: string, i: number) => (
+                      <Badge key={i} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  {/* Key Metrics */}
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-foreground">Deployment</span>
+                      <span className="capitalize">{project.deployment}</span>
+                      {project.deploymentUrl && (
+                        <a
+                          href={project.deploymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-blue-500 hover:underline truncate max-w-[100px]"
+                        >
+                          {project.deploymentUrl.replace(/^https?:\/\//, "")}
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-foreground">Repo</span>
+                      {project.githubRepo ? (
+                        <a
+                          href={project.githubRepo}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline hover:text-primary truncate"
+                        >
+                          {project.githubRepo.replace("https://github.com/", "")}
+                        </a>
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-foreground">Last Commit</span>
+                      <span>{project.lastCommit ? formatDate(project.lastCommit) : "-"}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-foreground">Last Deploy</span>
+                      <span>{project.lastDeployment ? formatDate(project.lastDeployment) : "-"}</span>
+                    </div>
+                  </div>
+
+                  {/* Next Task */}
+                  <div className="rounded-md bg-muted/50 p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Next Task</p>
+                    {nextTask ? (
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-sm truncate" title={nextTask.title}>{nextTask.title}</span>
+                        <Badge className={priorityColors[nextTask.priority] || priorityColors.medium + " text-[10px] px-1 py-0 h-5"}>
+                          {nextTask.priority}
+                        </Badge>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No open tasks</p>
+                    )}
+                  </div>
+                </CardContent>
+                <div className="p-6 pt-0 mt-auto">
+                  <Button variant="outline" className="w-full" asChild>
                     <Link href={`/projects/${project.id}`}>
-                      View <ArrowRight className="ml-2 h-4 w-4" />
+                      View Project
                     </Link>
                   </Button>
                 </div>
-              ))}
-            </div>
-          )}
-          <Button variant="outline" className="mt-4 w-full" asChild>
-            <Link href="/projects">
-              View All Projects <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+              </Card>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }

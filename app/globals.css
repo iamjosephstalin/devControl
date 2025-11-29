@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 20% 98%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -23,30 +23,30 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 
   .dark {
-    /* Inverted light theme - dark mode */
-    --background: 222.2 84% 4.9%;
-    --foreground: 0 0% 100%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 0 0% 100%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 222.2 47.4% 11.2%;
-    --secondary-foreground: 210 40% 96.1%;
-    --muted: 222.2 47.4% 11.2%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 222.2 47.4% 11.2%;
-    --accent-foreground: 210 40% 96.1%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 20%;
-    --input: 214.3 31.8% 20%;
-    --ring: 222.2 84% 4.9%;
+    /* Neutral black theme */
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
   }
 }
 
@@ -54,39 +54,43 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
-  
+
   /* Developer-oriented typography */
-  code, kbd, samp, pre {
+  code,
+  kbd,
+  samp,
+  pre {
     @apply font-mono;
   }
-  
+
   /* Terminal-like styling for code blocks */
   pre {
     @apply bg-[#1e1e1e] border border-border rounded-lg p-4 overflow-x-auto;
   }
-  
+
   /* Developer-friendly scrollbar */
   ::-webkit-scrollbar {
     @apply w-2.5 h-2.5;
   }
-  
+
   ::-webkit-scrollbar-track {
     @apply bg-background;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     @apply bg-muted rounded-full hover:bg-primary/50;
     @apply border border-border/50;
   }
-  
+
   /* Selection styling */
   ::selection {
     @apply bg-primary/40 text-foreground;
   }
-  
+
   /* Developer-oriented focus styles */
   *:focus-visible {
     @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
@@ -94,13 +98,14 @@
 }
 
 @layer components {
+
   /* Developer-oriented card styling */
   .dev-card {
     @apply bg-card border border-border rounded-lg shadow-sm;
     @apply transition-all duration-200;
     @apply hover:border-primary/50 hover:shadow-md;
   }
-  
+
   /* Terminal-like input styling */
   .dev-input {
     @apply bg-input border border-border rounded-md;
@@ -108,7 +113,7 @@
     @apply focus:ring-2 focus:ring-primary focus:border-primary;
     @apply transition-all duration-200;
   }
-  
+
   /* Code badge styling */
   .code-badge {
     @apply font-mono text-xs px-2 py-1 rounded;
@@ -116,4 +121,3 @@
     @apply border border-border;
   }
 }
-

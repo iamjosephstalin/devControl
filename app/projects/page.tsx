@@ -24,24 +24,8 @@ import {
 } from "@/components/ui/pagination"
 import { Plus, ExternalLink, Edit, Trash2, Grid3x3, List, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { CreateProjectDialog } from "@/components/projects/create-dialog"
+import { EditProjectDialog } from "@/components/projects/edit-dialog"
 import { formatDate } from "@/lib/utils"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 interface Project {
   id: string
@@ -53,6 +37,7 @@ interface Project {
   status: string
   createdAt: string
   updatedAt: string
+  tags: string | null
 }
 
 type ViewMode = "grid" | "list"
@@ -220,9 +205,9 @@ export default function ProjectsPage() {
               return (
                 <Card key={project.id}>
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle>{project.title}</CardTitle>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="break-all">{project.title}</CardTitle>
                         <CardDescription className="mt-1">
                           {project.description || "No description"}
                         </CardDescription>
@@ -260,7 +245,18 @@ export default function ProjectsPage() {
                           </a>
                         )}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          asChild
+                        >
+                          <a href={`/projects/${project.id}`}>
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            View
+                          </a>
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -416,9 +412,23 @@ export default function ProjectsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                asChild
+                              >
+                                <a
+                                  href={`/projects/${project.id}`}
+                                  className="flex items-center"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                  <span className="sr-only">View Project</span>
+                                </a>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => setEditingProject(project)}
                               >
                                 <Edit className="h-4 w-4" />
+                                <span className="sr-only">Edit Project</span>
                               </Button>
                               <Button
                                 variant="ghost"
@@ -434,6 +444,7 @@ export default function ProjectsPage() {
                                 }}
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
+                                <span className="sr-only">Delete Project</span>
                               </Button>
                             </div>
                           </TableCell>
@@ -512,154 +523,5 @@ export default function ProjectsPage() {
         />
       )}
     </div>
-  )
-}
-
-function EditProjectDialog({
-  project,
-  open,
-  onOpenChange,
-}: {
-  project: Project
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const queryClient = useQueryClient()
-  const [formData, setFormData] = useState({
-    title: project.title,
-    description: project.description || "",
-    techStack: JSON.parse(project.techStack || "[]").join(", "),
-    githubRepo: project.githubRepo || "",
-    deployment: project.deployment,
-    status: project.status,
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await fetch(`/api/projects/${project.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          techStack: data.techStack
-            .split(",")
-            .map((t: string) => t.trim())
-            .filter((t: string) => t),
-        }),
-      })
-      if (!res.ok) throw new Error("Failed to update project")
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] })
-      onOpenChange(false)
-    },
-  })
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Edit Project</DialogTitle>
-          <DialogDescription>
-            Update your project details
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label htmlFor="techStack">Tech Stack (comma-separated)</Label>
-            <Input
-              id="techStack"
-              value={formData.techStack}
-              onChange={(e) =>
-                setFormData({ ...formData, techStack: e.target.value })
-              }
-              placeholder="React, TypeScript, Next.js"
-            />
-          </div>
-          <div>
-            <Label htmlFor="githubRepo">GitHub Repository URL</Label>
-            <Input
-              id="githubRepo"
-              value={formData.githubRepo}
-              onChange={(e) =>
-                setFormData({ ...formData, githubRepo: e.target.value })
-              }
-              placeholder="https://github.com/username/repo"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="deployment">Deployment</Label>
-              <Select
-                value={formData.deployment}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, deployment: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="vercel">Vercel</SelectItem>
-                  <SelectItem value="hetzner">Hetzner</SelectItem>
-                  <SelectItem value="local">Local</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, status: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="paused">Paused</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => updateMutation.mutate(formData)}
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
   )
 }

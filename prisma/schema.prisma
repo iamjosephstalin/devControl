@@ -75,6 +75,10 @@ model Project {
   techStack   String   // JSON array of tags
   githubRepo  String?
   deployment  String   // "vercel" | "hetzner" | "local" | "other"
+  deploymentUrl String?
+  tags        String?  // JSON array of tags
+  lastCommit  DateTime?
+  lastDeployment DateTime?
   status      String   @default("active") // "active" | "paused" | "completed"
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)

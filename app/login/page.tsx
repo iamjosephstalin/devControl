@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { signIn, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function LoginPage() {
   const router = useRouter()
+  const [role, setRole] = useState<"admin" | "client">("admin")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -31,12 +32,18 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid email or password")
       } else {
-        // Get user role from session
         const sessionRes = await fetch("/api/auth/session")
         const session = await sessionRes.json()
-        
-        // Redirect based on role (clients see their projects, admins see dashboard)
-        if (session?.user?.role === "client") {
+        const userRole = session?.user?.role || "client"
+
+        if (userRole !== role) {
+          setError(`Please switch to ${userRole === 'admin' ? 'Admin' : 'Client'} to log in.`)
+          await signOut({ redirect: false })
+          setLoading(false)
+          return
+        }
+
+        if (userRole === "client") {
           router.push("/projects")
         } else {
           router.push("/")
@@ -51,56 +58,95 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
+        <div className="mb-8 text-center space-y-2">
+          <h1 className="text-4xl font-bold font-mono tracking-tight text-foreground">
             DevControl
-          </CardTitle>
-          <CardDescription className="text-center">
-            Your Personal Developer Operating System
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+          </h1>
+          <p className="text-muted-foreground">
+            {role === 'admin' ? 'System Administration' : 'Client Portal'}
+          </p>
+        </div>
+
+        <Card className="border-border shadow-lg">
+          <CardHeader className="space-y-1 pb-6">
+            <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-lg">
+              <button
+                onClick={() => setRole("admin")}
+                className={`py-2 text-sm font-medium rounded-md transition-all duration-200 ${role === "admin"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                Admin
+              </button>
+              <button
+                onClick={() => setRole("client")}
+                className={`py-2 text-sm font-medium rounded-md transition-all duration-200 ${role === "client"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                Client
+              </button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-            {/* Signup disabled - users are created by admins */}
-            {/* <div className="text-center text-sm">
-              <span className="text-muted-foreground">Don't have an account? </span>
-              <Link href="/signup" className="text-primary hover:underline">
-                Sign up
-              </Link>
-            </div> */}
-          </form>
-        </CardContent>
-      </Card>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="font-sans"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="font-sans"
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center animate-in slide-in-from-top-2">
+                  {error}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full font-medium transition-all duration-200"
+                disabled={loading}
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <span>Signing in...</span>
+                  </div>
+                ) : (
+                  "Sign In"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="mt-8 text-center text-sm text-muted-foreground">
+          <p>Protected System • Authorized Access Only</p>
+        </div>
+      </div>
     </div>
   )
 }
-

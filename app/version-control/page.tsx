@@ -409,16 +409,16 @@ export default function VersionControlPage() {
               provider === "github"
                 ? repo.html_url
                 : provider === "gitlab"
-                ? repo.web_url
-                : repo.links?.html?.href
+                  ? repo.web_url
+                  : repo.links?.html?.href
 
             return (
               <Card key={repo.id || repo.uuid}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Icon className={`h-5 w-5 ${config.color}`} />
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg flex items-center gap-2 break-all">
+                        <Icon className={`h-5 w-5 shrink-0 ${config.color}`} />
                         {repo.name}
                       </CardTitle>
                       <CardDescription className="mt-1 line-clamp-2">

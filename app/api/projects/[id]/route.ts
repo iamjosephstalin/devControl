@@ -52,7 +52,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { title, description, techStack, githubRepo, deployment, status } = body
+    const { title, description, techStack, githubRepo, deployment, status, tags, deploymentUrl } = body
 
     const project = await prisma.project.updateMany({
       where: {
@@ -63,8 +63,10 @@ export async function PUT(
         ...(title && { title }),
         ...(description !== undefined && { description }),
         ...(techStack && { techStack: JSON.stringify(techStack) }),
+        ...(tags && { tags: JSON.stringify(tags) }),
         ...(githubRepo !== undefined && { githubRepo }),
         ...(deployment && { deployment }),
+        ...(deploymentUrl !== undefined && { deploymentUrl }),
         ...(status && { status }),
       },
     })

@@ -22,8 +22,9 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Plus, Eye, EyeOff, Edit, Trash2, Copy, Filter, Grid3x3, List, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { Plus, Eye, EyeOff, Edit, Trash2, Copy, Filter, Grid3x3, List, ArrowUpDown, ArrowUp, ArrowDown, FileText } from "lucide-react"
 import { CreateSecretDialog } from "@/components/secrets/create-dialog"
+import { LockScreen } from "@/components/secrets/lock-screen"
 import { formatDate } from "@/lib/utils"
 import {
   Select,
@@ -32,6 +33,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
 
 interface Secret {
   id: string
@@ -52,9 +57,10 @@ type SortDirection = "asc" | "desc"
 
 export default function SecretsPage() {
   const queryClient = useQueryClient()
+  const [isUnlocked, setIsUnlocked] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all")
-  const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set())
+  const [revealedSecrets, setRevealedSecrets] = useState<Map<string, string>>(new Map())
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [sortField, setSortField] = useState<SortField>("updatedAt")
@@ -70,6 +76,7 @@ export default function SecretsPage() {
       if (!res.ok) throw new Error("Failed to fetch projects")
       return res.json()
     },
+    enabled: isUnlocked,
   })
 
   const { data: allSecrets = [], isLoading } = useQuery<Secret[]>({
@@ -79,6 +86,7 @@ export default function SecretsPage() {
       if (!res.ok) throw new Error("Failed to fetch secrets")
       return res.json()
     },
+    enabled: isUnlocked,
   })
 
   // Filter secrets based on selected project
@@ -153,22 +161,35 @@ export default function SecretsPage() {
   const toggleReveal = async (id: string) => {
     if (revealedSecrets.has(id)) {
       setRevealedSecrets((prev) => {
-        const next = new Set(prev)
+        const next = new Map(prev)
         next.delete(id)
         return next
       })
     } else {
-      setRevealedSecrets((prev) => new Set(prev).add(id))
+      try {
+        const res = await fetch(`/api/secrets/${id}`)
+        if (!res.ok) throw new Error("Failed to fetch secret value")
+        const data = await res.json()
+        setRevealedSecrets((prev) => new Map(prev).set(id, data.value))
+      } catch (error) {
+        console.error("Failed to reveal secret", error)
+      }
     }
   }
 
   const copyToClipboard = async (id: string) => {
     try {
-      const res = await fetch(`/api/secrets/${id}`)
-      const data = await res.json()
-      await navigator.clipboard.writeText(data.value)
-      setCopiedId(id)
-      setTimeout(() => setCopiedId(null), 2000)
+      let value = revealedSecrets.get(id)
+      if (!value) {
+        const res = await fetch(`/api/secrets/${id}`)
+        const data = await res.json()
+        value = data.value
+      }
+      if (value) {
+        await navigator.clipboard.writeText(value)
+        setCopiedId(id)
+        setTimeout(() => setCopiedId(null), 2000)
+      }
     } catch (error) {
       console.error("Failed to copy secret", error)
     }
@@ -179,6 +200,7 @@ export default function SecretsPage() {
     ssh: "bg-purple-500/10 text-purple-500",
     password: "bg-red-500/10 text-red-500",
     env_var: "bg-green-500/10 text-green-500",
+    markdown: "bg-yellow-500/10 text-yellow-500",
     other: "bg-gray-500/10 text-gray-500",
   }
 
@@ -202,6 +224,10 @@ export default function SecretsPage() {
     )
   }
 
+  if (!isUnlocked) {
+    return <LockScreen onUnlock={() => setIsUnlocked(true)} />
+  }
+
   if (isLoading) {
     return <div className="p-8">Loading...</div>
   }
@@ -210,9 +236,9 @@ export default function SecretsPage() {
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-mono tracking-tight">Secrets</h1>
+          <h1 className="text-3xl font-bold font-mono tracking-tight">Secrets Vault</h1>
           <p className="text-muted-foreground">
-            Manage your encrypted secrets and credentials
+            Securely manage your encrypted secrets and notes
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -275,13 +301,18 @@ export default function SecretsPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredSecrets.map((secret) => {
-              const isRevealed = revealedSecrets.has(secret.id)
+              const revealedValue = revealedSecrets.get(secret.id)
+              const isRevealed = !!revealedValue
+
               return (
-                <Card key={secret.id}>
+                <Card key={secret.id} className="flex flex-col">
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle>{secret.name}</CardTitle>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="flex items-center gap-2 break-all">
+                          {secret.type === 'markdown' && <FileText className="h-4 w-4 shrink-0" />}
+                          {secret.name}
+                        </CardTitle>
                         <CardDescription className="mt-1">
                           {secret.description || "No description"}
                         </CardDescription>
@@ -295,8 +326,8 @@ export default function SecretsPage() {
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
+                  <CardContent className="flex-1">
+                    <div className="space-y-3 h-full flex flex-col">
                       <div>
                         {secret.project ? (
                           <Badge variant="outline" className="mb-2">{secret.project.title}</Badge>
@@ -304,10 +335,42 @@ export default function SecretsPage() {
                           <Badge variant="secondary" className="mb-2">General</Badge>
                         )}
                       </div>
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+
+                      {isRevealed && secret.type === 'markdown' && (
+                        <div className="mt-2 p-4 bg-muted rounded-md overflow-auto max-h-[300px] prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              code({ node, inline, className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || '')
+                                return !inline && match ? (
+                                  <SyntaxHighlighter
+                                    {...props}
+                                    style={vscDarkPlus}
+                                    language={match[1]}
+                                    PreTag="div"
+                                  >
+                                    {String(children).replace(/\n$/, '')}
+                                  </SyntaxHighlighter>
+                                ) : (
+                                  <code {...props} className={className}>
+                                    {children}
+                                  </code>
+                                )
+                              }
+                            }}
+                          >
+                            {revealedValue || ''}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+
+                      <div className="flex-1" />
+
+                      <div className="flex items-center justify-between text-sm text-muted-foreground mt-4">
                         <span>Created {formatDate(secret.createdAt)}</span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 mt-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -421,10 +484,16 @@ export default function SecretsPage() {
                     </TableRow>
                   ) : (
                     paginatedSecrets.map((secret) => {
-                      const isRevealed = revealedSecrets.has(secret.id)
+                      const revealedValue = revealedSecrets.get(secret.id)
+                      const isRevealed = !!revealedValue
                       return (
                         <TableRow key={secret.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium">{secret.name}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {secret.type === 'markdown' && <FileText className="h-4 w-4 text-muted-foreground" />}
+                              {secret.name}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge
                               className={

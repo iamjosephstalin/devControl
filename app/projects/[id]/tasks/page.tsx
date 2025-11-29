@@ -110,13 +110,13 @@ export default function ProjectTasksPage() {
                           status === "backlog"
                             ? "in_progress"
                             : status === "in_progress"
-                            ? "completed"
-                            : "backlog"
+                              ? "completed"
+                              : "backlog"
                         handleStatusChange(task.id, nextStatus)
                       }}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-medium">{task.title}</h4>
+                      <div className="flex items-start justify-between mb-2 gap-2">
+                        <h4 className="font-medium break-all">{task.title}</h4>
                         <Badge
                           className={priorityColors[task.priority as keyof typeof priorityColors]}
                         >

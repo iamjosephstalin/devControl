@@ -296,13 +296,13 @@ export default function InfrastructurePage() {
               filteredServers.map((server) => (
                 <Card key={server.id}>
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="flex items-center gap-2">
-                          <Server className="h-5 w-5" />
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="flex items-center gap-2 break-all">
+                          <Server className="h-5 w-5 shrink-0" />
                           {server.name}
                         </CardTitle>
-                        <CardDescription className="mt-1">
+                        <CardDescription className="mt-1 break-all">
                           {server.host}:{server.port} • {server.username}
                         </CardDescription>
                       </div>

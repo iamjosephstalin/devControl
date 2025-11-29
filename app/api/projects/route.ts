@@ -71,15 +71,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, description, techStack, githubRepo, deployment, status } = body
+    const { title, description, techStack, githubRepo, deployment, status, tags, deploymentUrl } = body
 
     const project = await prisma.project.create({
       data: {
         title,
         description,
         techStack: JSON.stringify(techStack || []),
+        tags: JSON.stringify(tags || []),
         githubRepo,
         deployment: deployment || "local",
+        deploymentUrl,
         status: status || "active",
         userId: session.user.id,
       },

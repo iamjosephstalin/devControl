@@ -15,7 +15,13 @@ export default async function DashboardPage() {
     prisma.project.findMany({
       where: { userId },
       orderBy: { updatedAt: "desc" },
-      take: 5,
+      include: {
+        tasks: {
+          where: { status: { not: "completed" } },
+          orderBy: { priority: "desc" },
+          take: 1
+        }
+      },
     }),
     prisma.task.findMany({
       where: { userId },

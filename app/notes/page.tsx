@@ -257,15 +257,14 @@ export default function NotesPage() {
                 return (
                   <Card
                     key={note.id}
-                    className={`cursor-pointer transition-colors ${
-                      selectedNote?.id === note.id
+                    className={`cursor-pointer transition-colors ${selectedNote?.id === note.id
                         ? "border-primary"
                         : "hover:border-primary/50"
-                    }`}
+                      }`}
                     onClick={() => setSelectedNote(note)}
                   >
                     <CardHeader>
-                      <CardTitle className="text-lg">{note.title}</CardTitle>
+                      <CardTitle className="text-lg break-all">{note.title}</CardTitle>
                       <CardDescription>
                         Updated {formatDate(note.updatedAt)}
                       </CardDescription>
