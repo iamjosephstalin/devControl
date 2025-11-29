@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { EditProjectDialog } from "@/components/projects/edit-dialog"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { DeployButton } from "@/components/deployments/deploy-button"
 
 interface ProjectHeaderProps {
     project: any
@@ -76,6 +77,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
                         </Button>
                     </>
                 )}
+                <DeployButton projectId={project.id} />
                 <Button onClick={() => setIsEditOpen(true)}>
                     <Edit className="mr-2 h-4 w-4" />
                     Edit Project

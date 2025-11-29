@@ -89,7 +89,6 @@ export default function TerminalPage() {
         background: "#1e1e1e",
         foreground: "#d4d4d4",
         cursor: "#aeafad",
-        selection: "#3a3d41",
       },
       fontFamily: "JetBrains Mono, monospace",
       fontSize: 14,

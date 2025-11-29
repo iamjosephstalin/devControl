@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { notFound, redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/utils"
 import Link from "next/link"
-import { ArrowLeft, ExternalLink, Github, Calendar, Server, Key, FileText, CheckSquare, Edit } from "lucide-react"
+import { ArrowLeft, ExternalLink, Github, Calendar, Server, Key, FileText, CheckSquare, Edit, Rocket } from "lucide-react"
 import { ProjectHeader } from "@/components/projects/project-header"
+import { DeploymentHistory } from "@/components/deployments/deployment-history"
 
 export default async function ProjectDetailsPage({ params }: { params: { id: string } }) {
     const session = await getServerSession(authOptions)
@@ -180,6 +181,19 @@ export default async function ProjectDetailsPage({ params }: { params: { id: str
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Deployments */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Rocket className="h-5 w-5" />
+                                Recent Deployments
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <DeploymentHistory projectId={project.id} />
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Sidebar Column */}
@@ -234,6 +248,9 @@ export default async function ProjectDetailsPage({ params }: { params: { id: str
                             )}
                             <Button variant="outline" className="w-full mt-4" asChild>
                                 <Link href="/secrets">Manage Secrets</Link>
+                            </Button>
+                            <Button variant="outline" className="w-full mt-2" asChild>
+                                <Link href={`/projects/${project.id}/env`}>Manage .env Files</Link>
                             </Button>
                         </CardContent>
                     </Card>

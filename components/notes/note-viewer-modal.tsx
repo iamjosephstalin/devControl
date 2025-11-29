@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { X, Edit, Trash2 } from "lucide-react"
+import { X, Edit, Trash2, Sparkles, Loader2 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism"
@@ -44,6 +44,9 @@ export function NoteViewerModal({
   onEdit,
   onDelete,
 }: NoteViewerModalProps) {
+  const [isSummarizing, setIsSummarizing] = useState(false)
+  const [summary, setSummary] = useState<string | null>(null)
+
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (open) {
@@ -56,9 +59,36 @@ export function NoteViewerModal({
     }
   }, [open])
 
+  // Reset summary when note changes or modal closes
+  useEffect(() => {
+    if (!open) {
+      setSummary(null)
+      setIsSummarizing(false)
+    }
+  }, [open, note])
+
   if (!note) return null
 
   const tags = note.tags ? JSON.parse(note.tags) : []
+
+  const handleSummarize = async () => {
+    if (!note) return
+    setIsSummarizing(true)
+    try {
+      const res = await fetch("/api/ai/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: note.content }),
+      })
+      if (!res.ok) throw new Error("Failed to summarize")
+      const data = await res.json()
+      setSummary(data.summary)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsSummarizing(false)
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,6 +122,19 @@ export function NoteViewerModal({
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSummarize}
+                disabled={isSummarizing}
+              >
+                {isSummarizing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Summarize
+              </Button>
               {onEdit && (
                 <Button variant="outline" size="sm" onClick={onEdit}>
                   <Edit className="mr-2 h-4 w-4" />
@@ -119,6 +162,25 @@ export function NoteViewerModal({
               </Button>
             </div>
           </div>
+          {summary && (
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-border relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-6 w-6"
+                onClick={() => setSummary(null)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+              <h4 className="text-sm font-semibold flex items-center gap-2 mb-2">
+                <Sparkles className="h-3 w-3 text-primary" />
+                AI Summary
+              </h4>
+              <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {summary}
+              </div>
+            </div>
+          )}
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-blockquote:border-l-primary prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:italic prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-img:border prose-img:border-border prose-table:border prose-table:border-border prose-th:border prose-th:border-border prose-th:bg-muted prose-td:border prose-td:border-border">
@@ -232,4 +294,3 @@ export function NoteViewerModal({
     </Dialog>
   )
 }
-

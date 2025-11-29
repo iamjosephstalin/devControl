@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "../../../auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { listSFTPDirectory, readSFTPFile, writeSFTPFile, deleteSFTPFile, createSFTPDirectory } from "@/lib/sftp"
 import { decrypt } from "@/lib/encryption"
@@ -59,7 +59,7 @@ export async function GET(
       const fileContent = await readSFTPFile(sshConfig, path)
       const filename = path.split('/').pop() || 'file'
       
-      return new NextResponse(fileContent, {
+      return new NextResponse(new Uint8Array(fileContent), {
         headers: {
           'Content-Type': 'application/octet-stream',
           'Content-Disposition': `attachment; filename="${filename}"`,

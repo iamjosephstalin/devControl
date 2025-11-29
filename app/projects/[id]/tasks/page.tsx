@@ -9,6 +9,7 @@ import { CreateTaskDialog } from "@/components/tasks/create-dialog"
 import { useState } from "react"
 import { Plus, Calendar, AlertCircle } from "lucide-react"
 import { formatDate } from "@/lib/utils"
+import { KanbanBoard } from "@/components/tasks/kanban-board"
 
 export default function ProjectTasksPage() {
   const params = useParams()
@@ -86,60 +87,8 @@ export default function ProjectTasksPage() {
       {isLoading ? (
         <p>Loading tasks...</p>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
-          {["backlog", "in_progress", "completed"].map((status) => {
-            const statusTasks = tasks?.filter((t: any) => t.status === status) || []
-            return (
-              <Card key={status}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${statusColors[status as keyof typeof statusColors]}`} />
-                    {status.replace("_", " ").toUpperCase()}
-                  </CardTitle>
-                  <CardDescription>
-                    {statusTasks.length} task{statusTasks.length !== 1 ? "s" : ""}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {statusTasks.map((task: any) => (
-                    <div
-                      key={task.id}
-                      className="p-3 border rounded-lg hover:bg-accent cursor-pointer"
-                      onClick={() => {
-                        const nextStatus =
-                          status === "backlog"
-                            ? "in_progress"
-                            : status === "in_progress"
-                              ? "completed"
-                              : "backlog"
-                        handleStatusChange(task.id, nextStatus)
-                      }}
-                    >
-                      <div className="flex items-start justify-between mb-2 gap-2">
-                        <h4 className="font-medium break-all">{task.title}</h4>
-                        <Badge
-                          className={priorityColors[task.priority as keyof typeof priorityColors]}
-                        >
-                          {task.priority}
-                        </Badge>
-                      </div>
-                      {task.description && (
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {task.description}
-                        </p>
-                      )}
-                      {task.dueDate && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(task.dueDate)}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )
-          })}
+        <div className="h-[calc(100vh-200px)]">
+          <KanbanBoard tasks={tasks || []} projectId={projectId} />
         </div>
       )}
 

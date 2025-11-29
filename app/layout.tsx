@@ -3,8 +3,9 @@ import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { Providers } from "./providers"
 import { AppLayoutClient } from "./layout-client"
+import { Toaster } from "sonner"
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
 })
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
         <Providers>
           <AppLayoutClient>{children}</AppLayoutClient>
+          <Toaster />
         </Providers>
       </body>
     </html>

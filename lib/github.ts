@@ -1,3 +1,32 @@
+export interface GitHubRepo {
+  id: number
+  name: string
+  full_name: string
+  description: string | null
+  html_url: string
+  stargazers_count: number
+  forks_count: number
+  updated_at: string
+  language: string | null
+  private: boolean
+  archived: boolean
+  default_branch: string
+}
+
+export async function fetchGitHubRepos(token: string): Promise<GitHubRepo[]> {
+  const response = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
+    headers: {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github.v3+json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch GitHub repos')
+  }
+
+  return response.json()
+}
 
 export async function fetchGitHubRepoDetails(repoUrl: string) {
   try {

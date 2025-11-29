@@ -87,6 +87,7 @@ model Project {
   servers     Server[]
   secrets     Secret[]
   assignments ProjectAssignment[]
+  deployments Deployment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -97,6 +98,7 @@ model Task {
   description String?
   status      String   @default("backlog") // "backlog" | "in_progress" | "completed"
   priority    String   @default("medium") // "low" | "medium" | "high"
+  position    Int      @default(0)
   dueDate     DateTime?
   projectId   String?
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -201,3 +203,18 @@ model ProjectAssignment {
   @@unique([userId, projectId])
 }
 
+
+model Deployment {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status      String   @default("pending") // "pending" | "in_progress" | "success" | "failed"
+  environment String   @default("production") // "production" | "staging"
+  commitHash  String?
+  logs        String?  // Stored logs
+  triggeredBy String   // "manual" | "git_push" | "webhook"
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  
+  @@index([projectId])
+}

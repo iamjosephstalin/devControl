@@ -1,5 +1,18 @@
 "use client"
 
+import {
+  Filter,
+  Plus,
+  List,
+  Grid3x3,
+  Folder,
+  Eye,
+  Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react"
+
 import { useState, useMemo } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
@@ -22,19 +35,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import {
-  Plus,
-  FileText,
-  Filter,
-  Grid3x3,
-  List,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Edit,
-  Trash2,
-  Eye,
-} from "lucide-react"
 import { CreateNoteDialog } from "@/components/notes/create-dialog"
 import { NoteViewerModal } from "@/components/notes/note-viewer-modal"
 import { formatDate } from "@/lib/utils"
@@ -104,9 +104,36 @@ export default function NotesPage() {
     return notes
   }, [allNotes, selectedProjectId])
 
+  // Extract folders from tags
+  const folders = useMemo(() => {
+    const folderSet = new Set<string>()
+    allNotes.forEach(note => {
+      if (note.tags) {
+        const tags = JSON.parse(note.tags)
+        tags.forEach((tag: string) => {
+          if (tag.startsWith("folder:")) {
+            folderSet.add(tag.replace("folder:", ""))
+          }
+        })
+      }
+    })
+    return Array.from(folderSet).sort()
+  }, [allNotes])
+
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
+
+  const folderFilteredNotes = useMemo(() => {
+    if (!selectedFolder) return filteredNotes
+    return filteredNotes.filter(note => {
+      if (!note.tags) return false
+      const tags = JSON.parse(note.tags)
+      return tags.includes(`folder:${selectedFolder}`)
+    })
+  }, [filteredNotes, selectedFolder])
+
   // Sort notes
   const sortedNotes = useMemo(() => {
-    const sorted = [...filteredNotes]
+    const sorted = [...folderFilteredNotes]
     sorted.sort((a, b) => {
       let aValue: any
       let bValue: any
@@ -137,7 +164,7 @@ export default function NotesPage() {
       return 0
     })
     return sorted
-  }, [filteredNotes, sortField, sortDirection])
+  }, [folderFilteredNotes, sortField, sortDirection])
 
   // Paginate notes
   const paginatedNotes = useMemo(() => {
@@ -238,297 +265,312 @@ export default function NotesPage() {
         </div>
       </div>
 
-      {viewMode === "grid" ? (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-1 space-y-4">
-            {filteredNotes.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground mb-4">No notes yet</p>
-                  <Button onClick={() => setIsCreateOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Your First Note
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredNotes.map((note) => {
-                const tags = note.tags ? JSON.parse(note.tags) : []
-                return (
-                  <Card
-                    key={note.id}
-                    className={`cursor-pointer transition-colors ${selectedNote?.id === note.id
-                        ? "border-primary"
-                        : "hover:border-primary/50"
-                      }`}
-                    onClick={() => setSelectedNote(note)}
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-lg break-all">{note.title}</CardTitle>
-                      <CardDescription>
-                        Updated {formatDate(note.updatedAt)}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {note.project ? (
-                          <Badge variant="secondary" className="mb-2">
-                            {note.project.title}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="mb-2">
-                            General
-                          </Badge>
-                        )}
-                        {tags.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {tags.map((tag: string, idx: number) => (
-                              <Badge key={idx} variant="outline">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 lg:col-span-2 space-y-2">
+          <h3 className="font-semibold mb-2 px-2">Folders</h3>
+          <Button
+            variant={selectedFolder === null ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => setSelectedFolder(null)}
+          >
+            <List className="mr-2 h-4 w-4" />
+            All Notes
+          </Button>
+          {folders.map(folder => (
+            <Button
+              key={folder}
+              variant={selectedFolder === folder ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setSelectedFolder(folder)}
+            >
+              <Folder className="mr-2 h-4 w-4" />
+              {folder}
+            </Button>
+          ))}
+        </div>
+
+        <div className="col-span-12 lg:col-span-10">
+          {viewMode === "grid" ? (
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-3 space-y-4">
+                {filteredNotes.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <p className="text-muted-foreground mb-4">No notes yet</p>
+                      <Button onClick={() => setIsCreateOpen(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Your First Note
+                      </Button>
                     </CardContent>
                   </Card>
-                )
-              })
-            )}
-          </div>
-
-          <div className="lg:col-span-2">
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Click on a note to view its content
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>
-                  Notes ({filteredNotes.length})
-                </CardTitle>
-                <div className="text-sm text-muted-foreground">
-                  Showing {paginatedNotes.length} of {filteredNotes.length}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort("title")}
-                    >
-                      <div className="flex items-center">
-                        Title
-                        <SortIcon field="title" />
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort("project")}
-                    >
-                      <div className="flex items-center">
-                        Project
-                        <SortIcon field="project" />
-                      </div>
-                    </TableHead>
-                    <TableHead>Tags</TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort("updatedAt")}
-                    >
-                      <div className="flex items-center">
-                        Updated
-                        <SortIcon field="updatedAt" />
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort("createdAt")}
-                    >
-                      <div className="flex items-center">
-                        Created
-                        <SortIcon field="createdAt" />
-                      </div>
-                    </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedNotes.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        <p className="text-muted-foreground">No notes found</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedNotes.map((note) => {
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredNotes.map((note) => {
                       const tags = note.tags ? JSON.parse(note.tags) : []
                       return (
-                        <TableRow
+                        <Card
                           key={note.id}
-                          className="cursor-pointer hover:bg-muted/50"
+                          className={`cursor-pointer transition-colors hover:border-primary/50`}
                           onClick={() => setSelectedNote(note)}
                         >
-                          <TableCell className="font-medium">
-                            {note.title}
-                          </TableCell>
-                          <TableCell>
-                            {note.project ? (
-                              <Badge variant="secondary">
-                                {note.project.title}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline">General</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {tags.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {tags.slice(0, 3).map((tag: string, idx: number) => (
-                                  <Badge key={idx} variant="outline" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                                {tags.length > 3 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{tags.length - 3}
-                                  </Badge>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {formatDate(note.updatedAt)}
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {formatDate(note.createdAt)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSelectedNote(note)
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  if (
-                                    confirm(
-                                      "Are you sure you want to delete this note?"
-                                    )
-                                  ) {
-                                    deleteMutation.mutate(note.id)
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                          <CardHeader>
+                            <CardTitle className="text-lg break-all">{note.title}</CardTitle>
+                            <CardDescription>
+                              Updated {formatDate(note.updatedAt)}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              {note.project ? (
+                                <Badge variant="secondary" className="mb-2">
+                                  {note.project.title}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="mb-2">
+                                  General
+                                </Badge>
+                              )}
+                              {tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {tags.map((tag: string, idx: number) => (
+                                    <Badge key={idx} variant="outline">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
                             </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>
+                      Notes ({filteredNotes.length})
+                    </CardTitle>
+                    <div className="text-sm text-muted-foreground">
+                      Showing {paginatedNotes.length} of {filteredNotes.length}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort("title")}
+                        >
+                          <div className="flex items-center">
+                            Title
+                            <SortIcon field="title" />
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort("project")}
+                        >
+                          <div className="flex items-center">
+                            Project
+                            <SortIcon field="project" />
+                          </div>
+                        </TableHead>
+                        <TableHead>Tags</TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort("updatedAt")}
+                        >
+                          <div className="flex items-center">
+                            Updated
+                            <SortIcon field="updatedAt" />
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort("createdAt")}
+                        >
+                          <div className="flex items-center">
+                            Created
+                            <SortIcon field="createdAt" />
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedNotes.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8">
+                            <p className="text-muted-foreground">No notes found</p>
                           </TableCell>
                         </TableRow>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                      ) : (
+                        paginatedNotes.map((note) => {
+                          const tags = note.tags ? JSON.parse(note.tags) : []
+                          return (
+                            <TableRow
+                              key={note.id}
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => setSelectedNote(note)}
+                            >
+                              <TableCell className="font-medium">
+                                {note.title}
+                              </TableCell>
+                              <TableCell>
+                                {note.project ? (
+                                  <Badge variant="secondary">
+                                    {note.project.title}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">General</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {tags.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {tags.slice(0, 3).map((tag: string, idx: number) => (
+                                      <Badge key={idx} variant="outline" className="text-xs">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                    {tags.length > 3 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{tags.length - 3}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="font-mono text-sm">
+                                {formatDate(note.updatedAt)}
+                              </TableCell>
+                              <TableCell className="font-mono text-sm">
+                                {formatDate(note.createdAt)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedNote(note)
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      if (
+                                        confirm(
+                                          "Are you sure you want to delete this note?"
+                                        )
+                                      ) {
+                                        deleteMutation.mutate(note.id)
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
 
-          {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className={
-                      currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                  if (
-                    page === 1 ||
-                    page === totalPages ||
-                    (page >= currentPage - 1 && page <= currentPage + 1)
-                  ) {
-                    return (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          onClick={() => setCurrentPage(page)}
-                          isActive={currentPage === page}
-                          className="cursor-pointer"
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  } else if (page === currentPage - 2 || page === currentPage + 2) {
-                    return (
-                      <PaginationItem key={page}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )
-                  }
-                  return null
-                })}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    className={
-                      currentPage === totalPages
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+              {totalPages > 1 && (
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        className={
+                          currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                      } else if (page === currentPage - 2 || page === currentPage + 2) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )
+                      }
+                      return null
+                    })}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() =>
+                          setCurrentPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        className={
+                          currentPage === totalPages
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
           )}
+
+          <CreateNoteDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+
+          <NoteViewerModal
+            note={selectedNote}
+            open={!!selectedNote}
+            onOpenChange={(open) => {
+              if (!open) setSelectedNote(null)
+            }}
+            onDelete={() => {
+              if (
+                selectedNote &&
+                confirm("Are you sure you want to delete this note?")
+              ) {
+                deleteMutation.mutate(selectedNote.id)
+                setSelectedNote(null)
+              }
+            }}
+          />
         </div>
-      )}
-
-      <CreateNoteDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
-
-      <NoteViewerModal
-        note={selectedNote}
-        open={!!selectedNote}
-        onOpenChange={(open) => {
-          if (!open) setSelectedNote(null)
-        }}
-        onDelete={() => {
-          if (
-            selectedNote &&
-            confirm("Are you sure you want to delete this note?")
-          ) {
-            deleteMutation.mutate(selectedNote.id)
-            setSelectedNote(null)
-          }
-        }}
-      />
+      </div>
     </div>
   )
 }
