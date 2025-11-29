@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="12" fill="url(#gradient)"/>
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <!-- Control Panel/Dashboard Icon -->
+  <rect x="12" y="12" width="40" height="40" rx="4" fill="white" opacity="0.2"/>
+  <rect x="16" y="16" width="32" height="32" rx="2" fill="white" opacity="0.1"/>
+  <!-- Grid lines representing control -->
+  <line x1="20" y1="24" x2="44" y2="24" stroke="white" stroke-width="2" opacity="0.9"/>
+  <line x1="20" y1="32" x2="44" y2="32" stroke="white" stroke-width="2" opacity="0.9"/>
+  <line x1="20" y1="40" x2="44" y2="40" stroke="white" stroke-width="2" opacity="0.9"/>
+  <!-- Control dots -->
+  <circle cx="48" cy="24" r="2.5" fill="white" opacity="0.9"/>
+  <circle cx="48" cy="32" r="2.5" fill="white" opacity="0.9"/>
+  <circle cx="48" cy="40" r="2.5" fill="white" opacity="0.9"/>
+  <!-- "DC" text for DevControl -->
+  <text x="32" y="52" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="bold" fill="white" opacity="0.9" text-anchor="middle">DC</text>
+</svg>

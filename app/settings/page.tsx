@@ -1,0 +1,579 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Settings,
+  Keyboard,
+  User,
+  Bell,
+  Palette,
+  Globe,
+  Save,
+  RotateCcw,
+} from "lucide-react"
+import { useTheme } from "next-themes"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { defaultShortcuts, formatShortcut, type ShortcutConfig } from "@/lib/shortcuts"
+import { CreateUserDialog } from "@/components/users/create-user-dialog"
+
+export default function SettingsPage() {
+  const { theme } = useTheme()
+  const [shortcuts, setShortcuts] = useState<ShortcutConfig>(defaultShortcuts)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    // Load saved shortcuts from localStorage
+    const saved = localStorage.getItem("shortcuts")
+    if (saved) {
+      try {
+        setShortcuts(JSON.parse(saved))
+      } catch (e) {
+        console.error("Failed to load shortcuts", e)
+      }
+    }
+  }, [])
+
+  const handleShortcutChange = (key: string, value: string) => {
+    setShortcuts((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleSave = () => {
+    localStorage.setItem("shortcuts", JSON.stringify(shortcuts))
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleReset = () => {
+    setShortcuts(defaultShortcuts)
+    localStorage.setItem("shortcuts", JSON.stringify(defaultShortcuts))
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const shortcutKeys = [
+    { key: "commandPalette", label: "Open Command Palette", default: defaultShortcuts.commandPalette },
+    { key: "newProject", label: "Create New Project", default: defaultShortcuts.newProject },
+    { key: "newTask", label: "Create New Task", default: defaultShortcuts.newTask },
+    { key: "newSecret", label: "Create New Secret", default: defaultShortcuts.newSecret },
+    { key: "newNote", label: "Create New Note", default: defaultShortcuts.newNote },
+    { key: "toggleTheme", label: "Toggle Theme", default: defaultShortcuts.toggleTheme },
+  ]
+
+  return (
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold font-mono tracking-tight">Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your account, preferences, and app customizations
+        </p>
+      </div>
+
+      <Tabs defaultValue="general" className="max-w-4xl">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            General
+          </TabsTrigger>
+          <TabsTrigger value="shortcuts" className="flex items-center gap-2">
+            <Keyboard className="h-4 w-4" />
+            Shortcuts
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            Appearance
+          </TabsTrigger>
+          <TabsTrigger value="account" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Account
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="permissions" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Permissions
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>General Settings</CardTitle>
+              <CardDescription>
+                Configure general application preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="language">Language</Label>
+                <select
+                  id="language"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  defaultValue="en"
+                >
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="timezone">Timezone</Label>
+                <select
+                  id="timezone"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  defaultValue="UTC"
+                >
+                  <option value="UTC">UTC</option>
+                  <option value="America/New_York">Eastern Time (ET)</option>
+                  <option value="America/Chicago">Central Time (CT)</option>
+                  <option value="America/Denver">Mountain Time (MT)</option>
+                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                  <option value="Europe/London">London (GMT)</option>
+                  <option value="Europe/Paris">Paris (CET)</option>
+                  <option value="Asia/Tokyo">Tokyo (JST)</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto-save</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically save changes
+                  </p>
+                </div>
+                <input type="checkbox" defaultChecked className="h-4 w-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="shortcuts" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Keyboard Shortcuts</CardTitle>
+                  <CardDescription>
+                    Customize keyboard shortcuts for quick actions
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleReset}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reset
+                  </Button>
+                  <Button size="sm" onClick={handleSave}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {saved ? "Saved!" : "Save"}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                {shortcutKeys.map((item) => (
+                  <div
+                    key={item.key}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
+                    <div className="flex-1">
+                      <Label className="font-medium">{item.label}</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Default: <Badge variant="outline" className="font-mono text-xs">
+                          {formatShortcut(item.default)}
+                        </Badge>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={shortcuts[item.key] || ""}
+                        onChange={(e) => handleShortcutChange(item.key, e.target.value)}
+                        placeholder={item.default}
+                        className="w-32 font-mono text-sm"
+                      />
+                      {shortcuts[item.key] && (
+                        <Badge variant="secondary" className="font-mono">
+                          {formatShortcut(shortcuts[item.key])}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Note:</strong> Use "mod" for Cmd on Mac or Ctrl on Windows/Linux.
+                  Format: mod+k, mod+shift+p, etc.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="appearance" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+              <CardDescription>
+                Customize the look and feel of the application
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Theme</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Choose your preferred theme
+                  </p>
+                </div>
+                <ThemeToggle />
+              </div>
+              <div>
+                <Label htmlFor="font-size">Font Size</Label>
+                <select
+                  id="font-size"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 mt-2"
+                  defaultValue="medium"
+                >
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="density">UI Density</Label>
+                <select
+                  id="density"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 mt-2"
+                  defaultValue="comfortable"
+                >
+                  <option value="compact">Compact</option>
+                  <option value="comfortable">Comfortable</option>
+                  <option value="spacious">Spacious</option>
+                </select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="account" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Settings</CardTitle>
+              <CardDescription>
+                Update your account information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  placeholder="Your name"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Change Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter new password"
+                  className="mt-2"
+                />
+              </div>
+              <Button>Save Changes</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notifications</CardTitle>
+              <CardDescription>
+                Manage your notification preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Email Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receive email notifications
+                  </p>
+                </div>
+                <input type="checkbox" defaultChecked className="h-4 w-4" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Task Reminders</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get reminders for due tasks
+                  </p>
+                </div>
+                <input type="checkbox" defaultChecked className="h-4 w-4" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Deployment Alerts</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Notify on deployment status changes
+                  </p>
+                </div>
+                <input type="checkbox" defaultChecked className="h-4 w-4" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Server Health Alerts</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Alert on server issues
+                  </p>
+                </div>
+                <input type="checkbox" defaultChecked className="h-4 w-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-6 mt-6">
+          <UsersManagement />
+        </TabsContent>
+
+        <TabsContent value="permissions" className="space-y-6 mt-6">
+          <PermissionsManagement />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+// Users Management Component
+function UsersManagement() {
+  const { data: session } = useSession()
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const res = await fetch("/api/users")
+      if (!res.ok) throw new Error("Failed to fetch users")
+      return res.json()
+    },
+    enabled: session?.user?.role === "admin",
+  })
+
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+
+  if (session?.user?.role !== "admin") {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-muted-foreground">You don't have permission to manage users.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>User Management</CardTitle>
+            <CardDescription>
+              Create and manage user accounts
+            </CardDescription>
+          </div>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <User className="mr-2 h-4 w-4" />
+            Create User
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p>Loading users...</p>
+        ) : (
+          <div className="space-y-2">
+            {users?.map((user: any) => (
+              <div
+                key={user.id}
+                className="flex items-center justify-between p-3 rounded-lg border"
+              >
+                <div>
+                  <p className="font-medium">{user.name || user.email}</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                    {user.role}
+                  </Badge>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Created {new Date(user.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+      <CreateUserDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+    </Card>
+  )
+}
+
+// Permissions Management Component
+function PermissionsManagement() {
+  const { data: session } = useSession()
+  const { data: users } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const res = await fetch("/api/users")
+      if (!res.ok) throw new Error("Failed to fetch users")
+      return res.json()
+    },
+    enabled: session?.user?.role === "admin",
+  })
+
+  const { data: permissions } = useQuery({
+    queryKey: ["permissions"],
+    queryFn: async () => {
+      const res = await fetch("/api/permissions")
+      if (!res.ok) throw new Error("Failed to fetch permissions")
+      return res.json()
+    },
+    enabled: session?.user?.role === "admin",
+  })
+
+  const [selectedUserId, setSelectedUserId] = useState<string>("")
+
+  const resources = ["projects", "tasks", "secrets", "servers", "notes", "settings"]
+  const actions = ["read", "write", "delete", "manage"]
+
+  const queryClient = useQueryClient()
+
+  const handleTogglePermission = async (userId: string, resource: string, action: string) => {
+    const existing = permissions?.find(
+      (p: any) => p.userId === userId && p.resource === resource && p.action === action
+    )
+
+    try {
+      if (existing) {
+        await fetch(`/api/permissions?id=${existing.id}`, { method: "DELETE" })
+      } else {
+        await fetch("/api/permissions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, resource, action }),
+        })
+      }
+      // Refetch permissions
+      queryClient.invalidateQueries({ queryKey: ["permissions"] })
+    } catch (error) {
+      console.error("Failed to toggle permission:", error)
+    }
+  }
+
+  if (session?.user?.role !== "admin") {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-muted-foreground">You don't have permission to manage permissions.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Permissions Management</CardTitle>
+        <CardDescription>
+          Configure permissions for users
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label>Select User</Label>
+          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a user" />
+            </SelectTrigger>
+            <SelectContent>
+              {users?.filter((u: any) => u.role === "client").map((user: any) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name || user.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedUserId && (
+          <div className="space-y-4">
+            <h3 className="font-medium">Permissions</h3>
+            <div className="space-y-2">
+              {resources.map((resource) => (
+                <div key={resource} className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-2 capitalize">{resource}</h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    {actions.map((action) => {
+                      const hasPermission = permissions?.some(
+                        (p: any) =>
+                          p.userId === selectedUserId &&
+                          p.resource === resource &&
+                          p.action === action
+                      )
+                      return (
+                        <label
+                          key={action}
+                          className="flex items-center space-x-2 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={hasPermission}
+                            onChange={() =>
+                              handleTogglePermission(selectedUserId, resource, action)
+                            }
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm capitalize">{action}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

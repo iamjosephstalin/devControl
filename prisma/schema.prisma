@@ -1,0 +1,199 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("client") // "admin" | "client"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  projects      Project[]
+  tasks         Task[]
+  secrets       Secret[]
+  servers       Server[]
+  notes         Note[]
+  permissions   Permission[]
+  assignedProjects ProjectAssignment[]
+  createdBy    String?   // Admin who created this user
+  creator      User?     @relation("UserCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdUsers User[]     @relation("UserCreator")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  techStack   String   // JSON array of tags
+  githubRepo  String?
+  deployment  String   // "vercel" | "hetzner" | "local" | "other"
+  status      String   @default("active") // "active" | "paused" | "completed"
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  notes       Note[]
+  servers     Server[]
+  secrets     Secret[]
+  assignments ProjectAssignment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("backlog") // "backlog" | "in_progress" | "completed"
+  priority    String   @default("medium") // "low" | "medium" | "high"
+  dueDate     DateTime?
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  githubIssueNumber Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Secret {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // "api_key" | "ssh" | "password" | "env_var" | "other"
+  encryptedValue String // AES-256 encrypted
+  description String?
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  serverId    String?
+  server      Server?  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Server {
+  id          String   @id @default(cuid())
+  name        String
+  host        String
+  port        Int      @default(22)
+  username    String
+  encryptedPassword String? // AES-256 encrypted
+  sshKeyPath  String?
+  provider    String   // "hetzner" | "aws" | "digitalocean" | "other"
+  region      String?
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domains     Domain[]
+  secrets     Secret[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Domain {
+  id          String   @id @default(cuid())
+  name        String
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  dnsRecords  String?  // JSON array of DNS records
+  sslExpiry   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   // Markdown content
+  tags        String?  // JSON array of tags
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String   // "task_completed" | "deployment" | "server_action" | "git_commit" | "other"
+  description String
+  metadata    String?  // JSON object
+  userId      String
+  createdAt   DateTime @default(now())
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource    String   // "projects" | "tasks" | "secrets" | "servers" | "notes" | "settings"
+  action      String   // "read" | "write" | "delete" | "manage"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, resource, action])
+}
+
+model ProjectAssignment {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role        String   @default("viewer") // "viewer" | "editor" | "admin"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, projectId])
+}
+
