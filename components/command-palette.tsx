@@ -45,7 +45,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const { setTheme, theme } = useTheme()
   const [search, setSearch] = React.useState("")
 
-  const commands: CommandItem[] = [
+  const commands: CommandItem[] = React.useMemo(() => [
     // Navigation
     {
       id: "dashboard",
@@ -178,7 +178,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       keywords: ["sign out", "logout", "exit"],
       group: "Account",
     },
-  ]
+  ], [theme, setTheme])
 
   const filteredCommands = React.useMemo(() => {
     if (!search) return commands

@@ -106,7 +106,7 @@ export function DashboardOverview({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
-              Today's Tasks
+              Today&apos;s Tasks
             </CardTitle>
             <CardDescription>Tasks due today</CardDescription>
           </CardHeader>

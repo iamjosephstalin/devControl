@@ -59,7 +59,7 @@ export default async function DashboardPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold font-mono tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground font-mono text-sm">
-          Welcome back! Here's what's happening today.
+          Welcome back! Here&apos;s what&apos;s happening today.
         </p>
       </div>
 

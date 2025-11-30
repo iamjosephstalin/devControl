@@ -187,7 +187,7 @@ export function SSHTerminal({
         terminalInstanceRef.current = null
       }
     }
-  }, [open, serverId, serverName, executeCommand])
+  }, [open, serverId, serverName, executeCommand, historyIndex])
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen)

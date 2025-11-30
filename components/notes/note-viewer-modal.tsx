@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import {
   Dialog,
   DialogContent,
@@ -278,10 +279,13 @@ export function NoteViewerModal({
                 ),
                 hr: () => <hr className="my-6 border-border" />,
                 img: ({ src, alt }) => (
-                  <img
-                    src={src}
-                    alt={alt}
+                  <Image
+                    src={src || ""}
+                    alt={alt || ""}
+                    width={800}
+                    height={600}
                     className="rounded-lg border border-border my-4 max-w-full h-auto"
+                    unoptimized
                   />
                 ),
               }}
