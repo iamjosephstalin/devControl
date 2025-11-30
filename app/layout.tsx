@@ -1,19 +1,9 @@
 import type { Metadata } from "next"
-import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
+import "./google-sans.css"
 import { Providers } from "./providers"
 import { AppLayoutClient } from "./layout-client"
 import { Toaster } from "sonner"
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-})
 
 export const metadata: Metadata = {
   title: "DevControl - Your Personal Developer Operating System",
@@ -31,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
+      <body style={{ fontFamily: "'Google Sans Code', ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" }}>
         <Providers>
           <AppLayoutClient>{children}</AppLayoutClient>
           <Toaster />

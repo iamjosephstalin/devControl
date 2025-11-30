@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
+import { Terminal } from "lucide-react"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -58,16 +59,29 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            Create Account
-          </CardTitle>
-          <CardDescription className="text-center">
-            Sign up for DevControl
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
+        <div className="mb-8 text-center space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <Terminal className="h-10 w-10 text-primary" />
+            <h1 className="text-4xl font-bold font-mono tracking-tight text-foreground">
+              DevControl
+            </h1>
+          </div>
+          <p className="text-muted-foreground">
+            Create your developer account
+          </p>
+        </div>
+
+        <Card className="border-border shadow-lg">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">
+              Create Account
+            </CardTitle>
+            <CardDescription className="text-center">
+              Sign up for DevControl
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -116,7 +130,12 @@ export default function SignupPage() {
             </div>
           </form>
         </CardContent>
-      </Card>
+        </Card>
+
+        <div className="mt-8 text-center text-sm text-muted-foreground">
+          <p>Join the Developer Operating System</p>
+        </div>
+      </div>
     </div>
   )
 }

@@ -17,6 +17,7 @@ import {
   Settings,
   LogOut,
   User,
+  Terminal,
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
@@ -29,7 +30,7 @@ const adminNavigation = [
   { name: "Secrets", href: "/secrets", icon: Key },
   { name: "Infrastructure", href: "/infrastructure", icon: Server },
   { name: "Version Control", href: "/version-control", icon: Github },
-  { name: "Deployment Integrations", href: "/deployments", icon: Zap },
+  { name: "Deployments", href: "/deployments", icon: Zap },
   { name: "Notes", href: "/notes", icon: FileText },
   { name: "Schedule", href: "/schedule", icon: Calendar },
   { name: "Settings", href: "/settings", icon: Settings },
@@ -63,9 +64,15 @@ export function Sidebar() {
         isCollapsed ? "justify-center" : "justify-between"
       )}>
         {!isCollapsed && (
-          <h1 className="text-xl font-bold font-mono tracking-tight whitespace-nowrap overflow-hidden">
-            DevControl
-          </h1>
+          <div className="flex items-center gap-2">
+            <Terminal className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-bold font-mono tracking-tight whitespace-nowrap overflow-hidden">
+              DevControl
+            </h1>
+          </div>
+        )}
+        {isCollapsed && (
+          <Terminal className="h-6 w-6 text-primary" />
         )}
         <Button
           variant="ghost"

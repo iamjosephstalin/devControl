@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Terminal } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -60,10 +61,13 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
-        <div className="mb-8 text-center space-y-2">
-          <h1 className="text-4xl font-bold font-mono tracking-tight text-foreground">
-            DevControl
-          </h1>
+        <div className="mb-8 text-center space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <Terminal className="h-10 w-10 text-primary" />
+            <h1 className="text-4xl font-bold font-mono tracking-tight text-foreground">
+              DevControl
+            </h1>
+          </div>
           <p className="text-muted-foreground">
             {role === 'admin' ? 'System Administration' : 'Client Portal'}
           </p>
