@@ -3,7 +3,7 @@
   font-style: normal;
   font-weight: 300 700;
   font-display: swap;
-  src: url('/fonts/GoogleSansCode-Regular.ttf') format('truetype');
+  src: url('/fonts/Google_Sans_Code/GoogleSansCode-VariableFont_wght.ttf') format('truetype');
 }
 
 @font-face {
@@ -11,10 +11,35 @@
   font-style: italic;
   font-weight: 300 700;
   font-display: swap;
-  src: url('/fonts/GoogleSansCode-Italic.ttf') format('truetype');
+  src: url('/fonts/Google_Sans_Code/GoogleSansCode-Italic-VariableFont_wght.ttf') format('truetype');
+}
+
+/* Static font fallbacks for better browser support */
+@font-face {
+  font-family: 'Google Sans Code';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Google_Sans_Code/static/GoogleSansCode-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Google Sans Code';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Google_Sans_Code/static/GoogleSansCode-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Google Sans Code';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Google_Sans_Code/static/GoogleSansCode-SemiBoldItalic.ttf') format('truetype');
 }
 
 * {
   font-family: 'Google Sans Code', ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-weight: 500;
+  font-weight: 400;
 }
