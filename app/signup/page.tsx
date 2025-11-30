@@ -64,7 +64,7 @@ export default function SignupPage() {
         <div className="mb-8 text-center space-y-4">
           <div className="flex items-center justify-center gap-3">
             <Terminal className="h-10 w-10 text-primary" />
-            <h1 className="text-4xl font-bold font-mono tracking-tight text-foreground">
+            <h1 className="text-4xl tracking-tight text-foreground">
               DevControl
             </h1>
           </div>
@@ -75,7 +75,7 @@ export default function SignupPage() {
 
         <Card className="border-border shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
+            <CardTitle className="text-2xl text-center">
               Create Account
             </CardTitle>
             <CardDescription className="text-center">

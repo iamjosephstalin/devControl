@@ -64,7 +64,7 @@ export default function LoginPage() {
         <div className="mb-8 text-center space-y-4">
           <div className="flex items-center justify-center gap-3">
             <Terminal className="h-10 w-10 text-primary" />
-            <h1 className="text-4xl font-bold font-mono tracking-tight text-foreground">
+            <h1 className="text-4xl tracking-tight text-foreground">
               DevControl
             </h1>
           </div>
@@ -78,7 +78,7 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-lg">
               <button
                 onClick={() => setRole("admin")}
-                className={`py-2 text-sm font-medium rounded-md transition-all duration-200 ${role === "admin"
+                className={`py-2 text-sm rounded-md transition-all duration-200 ${role === "admin"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                   }`}
@@ -87,7 +87,7 @@ export default function LoginPage() {
               </button>
               <button
                 onClick={() => setRole("client")}
-                className={`py-2 text-sm font-medium rounded-md transition-all duration-200 ${role === "client"
+                className={`py-2 text-sm rounded-md transition-all duration-200 ${role === "client"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                   }`}
@@ -108,7 +108,6 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="font-sans"
                 />
               </div>
               <div className="space-y-2">
@@ -119,7 +118,6 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="font-sans"
                 />
               </div>
 
@@ -131,7 +129,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full font-medium transition-all duration-200"
+                className="w-full transition-all duration-200"
                 disabled={loading}
               >
                 {loading ? (
