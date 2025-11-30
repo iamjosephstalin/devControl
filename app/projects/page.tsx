@@ -25,6 +25,8 @@ import {
 import { Plus, ExternalLink, Edit, Trash2, Grid3x3, List, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { CreateProjectDialog } from "@/components/projects/create-dialog"
 import { EditProjectDialog } from "@/components/projects/edit-dialog"
+import { PageContainer, PageHeader, ViewModeToggle } from "@/components/layout/page-header"
+import { PageContent, PageGrid, EmptyState } from "@/components/layout/page-content"
 import { formatDate } from "@/lib/utils"
 
 interface Project {
@@ -48,7 +50,7 @@ export default function ProjectsPage() {
   const queryClient = useQueryClient()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>("grid")
+  const [viewMode, setViewMode] = useState<ViewMode>("list")
   const [sortField, setSortField] = useState<SortField>("updatedAt")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [currentPage, setCurrentPage] = useState(1)
@@ -153,39 +155,22 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-mono tracking-tight">Projects</h1>
-          <p className="text-muted-foreground">
-            Manage your development projects
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 border rounded-md">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("grid")}
-              className="rounded-r-none"
-            >
-              <Grid3x3 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className="rounded-l-none"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Project
-          </Button>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Projects"
+        description="Manage your development projects"
+      >
+        <ViewModeToggle
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          gridIcon={<Grid3x3 className="h-4 w-4" />}
+          listIcon={<List className="h-4 w-4" />}
+        />
+        <Button onClick={() => setIsCreateOpen(true)}>
+          <Plus className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          New Project
+        </Button>
+      </PageHeader>
 
       {viewMode === "grid" ? (
         projects.length === 0 ? (
@@ -193,7 +178,7 @@ export default function ProjectsPage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <p className="text-muted-foreground mb-4">No projects yet</p>
               <Button onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 Create Your First Project
               </Button>
             </CardContent>
@@ -263,7 +248,7 @@ export default function ProjectsPage() {
                           className="flex-1"
                           onClick={() => setEditingProject(project)}
                         >
-                          <Edit className="mr-2 h-4 w-4" />
+                          <Edit className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
                           Edit
                         </Button>
                         <Button
@@ -280,7 +265,7 @@ export default function ProjectsPage() {
                             }
                           }}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <Trash2 className="mr-2 h-4 w-4 text-red-500 dark:text-red-400" />
                           Delete
                         </Button>
                       </div>
@@ -427,7 +412,7 @@ export default function ProjectsPage() {
                                 size="sm"
                                 onClick={() => setEditingProject(project)}
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                 <span className="sr-only">Edit Project</span>
                               </Button>
                               <Button
@@ -443,7 +428,7 @@ export default function ProjectsPage() {
                                   }
                                 }}
                               >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                                 <span className="sr-only">Delete Project</span>
                               </Button>
                             </div>
@@ -522,6 +507,6 @@ export default function ProjectsPage() {
           onOpenChange={(open) => !open && setEditingProject(null)}
         />
       )}
-    </div>
+    </PageContainer>
   )
 }

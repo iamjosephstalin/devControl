@@ -36,6 +36,8 @@ import {
 } from "lucide-react"
 import { CreateTaskDialog } from "@/components/tasks/create-dialog"
 import { formatDate } from "@/lib/utils"
+import { PageContainer, PageHeader, ViewModeToggle } from "@/components/layout/page-header"
+import { PageContent, PageGrid, EmptyState } from "@/components/layout/page-content"
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd"
 import {
   Select,
@@ -78,7 +80,7 @@ export default function TasksPage() {
   const queryClient = useQueryClient()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all")
-  const [viewMode, setViewMode] = useState<ViewMode>("kanban")
+  const [viewMode, setViewMode] = useState<ViewMode>("list")
   const [sortField, setSortField] = useState<SortField>("dueDate")
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const [currentPage, setCurrentPage] = useState(1)
@@ -225,15 +227,11 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-mono tracking-tight">Tasks</h1>
-          <p className="text-muted-foreground">
-            Manage your tasks with Kanban board or list view
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
+    <PageContainer>
+      <PageHeader
+        title="Tasks"
+        description="Manage your tasks with Kanban board or list view"
+      >
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select
@@ -254,32 +252,22 @@ export default function TasksPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center gap-2 border rounded-md">
-            <Button
-              variant={viewMode === "kanban" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("kanban")}
-              className="rounded-r-none"
-            >
-              <Grid3x3 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className="rounded-l-none"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
+          <ViewModeToggle
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            gridIcon={<Grid3x3 className="h-4 w-4" />}
+            listIcon={<List className="h-4 w-4" />}
+            gridValue="kanban"
+            listValue="list"
+          />
           <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             New Task
           </Button>
-        </div>
-      </div>
+      </PageHeader>
 
-      {viewMode === "kanban" ? (
+      <PageContent>
+        {viewMode === "kanban" ? (
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {statusColumns.map((column) => (
@@ -464,7 +452,7 @@ export default function TasksPage() {
                                 updateMutation.mutate({ id: task.id, status: newStatus })
                               }}
                             >
-                              <Edit className="h-4 w-4" />
+                              <Edit className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -475,7 +463,7 @@ export default function TasksPage() {
                                 }
                               }}
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                             </Button>
                           </div>
                         </TableCell>
@@ -538,9 +526,10 @@ export default function TasksPage() {
             </Pagination>
           )}
         </div>
-      )}
+        )}
+      </PageContent>
 
       <CreateTaskDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
-    </div>
+    </PageContainer>
   )
 }

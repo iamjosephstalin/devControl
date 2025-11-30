@@ -79,7 +79,7 @@ export default function ProjectTasksPage() {
 
       <div className="mb-4 flex justify-end">
         <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           Create Task
         </Button>
       </div>

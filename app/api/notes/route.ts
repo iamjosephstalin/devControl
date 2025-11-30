@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { encrypt, decrypt } from "@/lib/encryption"
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +30,28 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: "desc" },
     })
 
-    return NextResponse.json(notes)
+    // Decrypt encrypted notes for display
+    const processedNotes = notes.map(note => {
+      if (note.isEncrypted) {
+        try {
+          return {
+            ...note,
+            title: note.encryptedTitle ? decrypt(note.encryptedTitle) : note.title,
+            content: decrypt(note.content),
+          }
+        } catch (error) {
+          console.error("Failed to decrypt note:", note.id, error)
+          return {
+            ...note,
+            title: "[Encrypted - Unable to decrypt]",
+            content: "[Encrypted content - Unable to decrypt]",
+          }
+        }
+      }
+      return note
+    })
+
+    return NextResponse.json(processedNotes)
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch notes" },
@@ -46,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, content, tags, projectId } = body
+    const { title, content, tags, projectId, isEncrypted } = body
 
     if (!title || !content) {
       return NextResponse.json(
@@ -55,20 +77,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    let noteData: any = {
+      tags: tags && tags.length > 0 ? JSON.stringify(tags) : null,
+      projectId: projectId === "none" ? null : projectId,
+      userId: session.user.id,
+      isEncrypted: isEncrypted || false,
+    }
+
+    if (isEncrypted) {
+      // Encrypt the content and optionally the title
+      noteData.content = encrypt(content)
+      noteData.encryptedTitle = encrypt(title)
+      noteData.title = `[Encrypted] ${title.substring(0, 30)}${title.length > 30 ? '...' : ''}`
+    } else {
+      noteData.title = title
+      noteData.content = content
+    }
+
     const note = await prisma.note.create({
-      data: {
-        title,
-        content,
-        tags: tags && tags.length > 0 ? JSON.stringify(tags) : null,
-        projectId: projectId || null,
-        userId: session.user.id,
-      },
+      data: noteData,
     })
 
     return NextResponse.json(note)
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Error creating note:", error)
     return NextResponse.json(
-      { error: "Failed to create note" },
+      { error: "Failed to create note", details: error.message },
       { status: 500 }
     )
   }

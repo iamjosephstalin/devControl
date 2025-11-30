@@ -26,6 +26,8 @@ import { Plus, Eye, EyeOff, Edit, Trash2, Copy, Filter, Grid3x3, List, ArrowUpDo
 import { CreateSecretDialog } from "@/components/secrets/create-dialog"
 import { LockScreen } from "@/components/secrets/lock-screen"
 import { formatDate } from "@/lib/utils"
+import { PageContainer, PageHeader, ViewModeToggle } from "@/components/layout/page-header"
+import { PageContent, PageGrid, EmptyState } from "@/components/layout/page-content"
 import {
   Select,
   SelectContent,
@@ -62,7 +64,7 @@ export default function SecretsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all")
   const [revealedSecrets, setRevealedSecrets] = useState<Map<string, string>>(new Map())
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>("grid")
+  const [viewMode, setViewMode] = useState<ViewMode>("list")
   const [sortField, setSortField] = useState<SortField>("updatedAt")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [currentPage, setCurrentPage] = useState(1)
@@ -233,59 +235,54 @@ export default function SecretsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-mono tracking-tight">Secrets Vault</h1>
-          <p className="text-muted-foreground">
-            Securely manage your encrypted secrets and notes
-          </p>
+    <PageContainer>
+      <PageHeader
+        title="Secrets Vault"
+        description="Securely manage your encrypted secrets and notes"
+      >
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select
+            value={selectedProjectId}
+            onValueChange={setSelectedProjectId}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Projects</SelectItem>
+              <SelectItem value="general">General</SelectItem>
+              {projects.map((project: any) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select
-              value={selectedProjectId}
-              onValueChange={setSelectedProjectId}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filter by project" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
-                <SelectItem value="general">General</SelectItem>
-                {projects.map((project: any) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2 border rounded-md">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("grid")}
-              className="rounded-r-none"
-            >
-              <Grid3x3 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className="rounded-l-none"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Secret
+        <div className="flex items-center gap-2 border rounded-md">
+          <Button
+            variant={viewMode === "grid" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("grid")}
+            className="rounded-r-none"
+          >
+            <Grid3x3 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+            className="rounded-l-none"
+          >
+            <List className="h-4 w-4" />
           </Button>
         </div>
-      </div>
+        <Button onClick={() => setIsCreateOpen(true)}>
+          <Plus className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          New Secret
+        </Button>
+      </PageHeader>
 
       {viewMode === "grid" ? (
         filteredSecrets.length === 0 ? (
@@ -293,7 +290,7 @@ export default function SecretsPage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <p className="text-muted-foreground mb-4">No secrets yet</p>
               <Button onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 Create Your First Secret
               </Button>
             </CardContent>
@@ -409,7 +406,7 @@ export default function SecretsPage() {
                             }
                           }}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <Trash2 className="mr-2 h-4 w-4 text-red-500 dark:text-red-400" />
                           Delete
                         </Button>
                       </div>
@@ -549,7 +546,7 @@ export default function SecretsPage() {
                                   }
                                 }}
                               >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                               </Button>
                             </div>
                           </TableCell>
@@ -616,6 +613,6 @@ export default function SecretsPage() {
       )}
 
       <CreateSecretDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
-    </div>
+    </PageContainer>
   )
 }

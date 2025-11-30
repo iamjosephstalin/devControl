@@ -79,7 +79,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
                 )}
                 <DeployButton projectId={project.id} />
                 <Button onClick={() => setIsEditOpen(true)}>
-                    <Edit className="mr-2 h-4 w-4" />
+                    <Edit className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
                     Edit Project
                 </Button>
             </div>

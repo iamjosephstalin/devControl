@@ -85,3 +85,16 @@ export function generateStrongPassword(length: number = 8): string {
   })
 }
 
+/**
+ * Generates a secure password for vault/security purposes (12-16 characters)
+ */
+export function generateSecurePassword(length: number = 16): string {
+  return generatePassword({
+    length,
+    includeUppercase: true,
+    includeLowercase: true,
+    includeNumbers: true,
+    includeSymbols: true,
+  })
+}
+

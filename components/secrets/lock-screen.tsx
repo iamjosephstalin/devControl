@@ -21,10 +21,10 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
         setIsLoading(true)
 
         try {
-            const res = await fetch("/api/auth/verify-password", {
+            const res = await fetch("/api/auth/vault-password", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ password }),
+                body: JSON.stringify({ password, action: "verify" }),
             })
 
             const data = await res.json()
@@ -32,7 +32,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
             if (data.valid) {
                 onUnlock()
             } else {
-                setError("Incorrect password")
+                setError(data.fallback ? "Incorrect login password" : "Incorrect vault password")
             }
         } catch (err) {
             setError("Failed to verify password")
@@ -50,7 +50,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
                     </div>
                     <CardTitle>Locked Vault</CardTitle>
                     <CardDescription>
-                        Enter your login password to access your secrets
+                        Enter your vault password to access your secrets
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -25,16 +25,28 @@ import {
   Globe,
   Save,
   RotateCcw,
+  Lock,
+  Shield,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { defaultShortcuts, formatShortcut, type ShortcutConfig } from "@/lib/shortcuts"
 import { CreateUserDialog } from "@/components/users/create-user-dialog"
+import { PasswordInput } from "@/components/ui/password-input"
 
 export default function SettingsPage() {
   const { theme } = useTheme()
+  const { data: session, status } = useSession()
   const [shortcuts, setShortcuts] = useState<ShortcutConfig>(defaultShortcuts)
   const [saved, setSaved] = useState(false)
+  const [accountPassword, setAccountPassword] = useState("")
+  const [accountData, setAccountData] = useState({
+    name: "",
+    email: "",
+  })
+  const [accountLoading, setAccountLoading] = useState(false)
+  const [accountMessage, setAccountMessage] = useState("")
+  const [accountError, setAccountError] = useState("")
 
   useEffect(() => {
     // Load saved shortcuts from localStorage
@@ -47,6 +59,16 @@ export default function SettingsPage() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    // Initialize account data when session loads
+    if (session?.user && status === "authenticated") {
+      setAccountData({
+        name: session.user.name || "",
+        email: session.user.email || "",
+      })
+    }
+  }, [session, status])
 
   const handleShortcutChange = (key: string, value: string) => {
     setShortcuts((prev) => ({ ...prev, [key]: value }))
@@ -63,6 +85,55 @@ export default function SettingsPage() {
     localStorage.setItem("shortcuts", JSON.stringify(defaultShortcuts))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleAccountSave = async () => {
+    setAccountError("")
+    setAccountMessage("")
+    setAccountLoading(true)
+
+    try {
+      const updateData: any = {}
+      
+      // Add name and email if changed
+      if (accountData.name !== session?.user?.name) {
+        updateData.name = accountData.name
+      }
+      if (accountData.email !== session?.user?.email) {
+        updateData.email = accountData.email
+      }
+      
+      // Add password if provided
+      if (accountPassword) {
+        updateData.password = accountPassword
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        setAccountMessage("No changes to save")
+        setAccountLoading(false)
+        return
+      }
+
+      const res = await fetch(`/api/users/${session?.user?.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setAccountMessage("Account updated successfully!")
+        setAccountPassword("") // Clear password field
+        setTimeout(() => setAccountMessage(""), 3000)
+      } else {
+        setAccountError(data.error || "Failed to update account")
+      }
+    } catch (err) {
+      setAccountError("Failed to update account")
+    } finally {
+      setAccountLoading(false)
+    }
   }
 
   const shortcutKeys = [
@@ -84,7 +155,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="max-w-4xl">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             General
@@ -100,6 +171,10 @@ export default function SettingsPage() {
           <TabsTrigger value="account" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Account
+          </TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center gap-2">
+            <Lock className="h-4 w-4" />
+            Security
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
@@ -290,6 +365,8 @@ export default function SettingsPage() {
                 <Input
                   id="email"
                   type="email"
+                  value={accountData.email}
+                  onChange={(e) => setAccountData({ ...accountData, email: e.target.value })}
                   placeholder="your@email.com"
                   className="mt-2"
                 />
@@ -298,22 +375,42 @@ export default function SettingsPage() {
                 <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
+                  value={accountData.name}
+                  onChange={(e) => setAccountData({ ...accountData, name: e.target.value })}
                   placeholder="Your name"
                   className="mt-2"
                 />
               </div>
-              <div>
-                <Label htmlFor="password">Change Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter new password"
-                  className="mt-2"
-                />
-              </div>
-              <Button>Save Changes</Button>
+              <PasswordInput
+                id="password"
+                label="Change Password"
+                value={accountPassword}
+                onChange={setAccountPassword}
+                placeholder="Enter new password"
+                showGenerator={true}
+              />
+
+              {accountError && (
+                <div className="text-sm text-red-600 dark:text-red-400">
+                  {accountError}
+                </div>
+              )}
+
+              {accountMessage && (
+                <div className="text-sm text-green-600 dark:text-green-400">
+                  {accountMessage}
+                </div>
+              )}
+
+              <Button onClick={handleAccountSave} disabled={accountLoading}>
+                {accountLoading ? "Saving..." : "Save Changes"}
+              </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="security" className="space-y-6 mt-6">
+          <VaultPasswordSettings />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6 mt-6">
@@ -573,6 +670,227 @@ function PermissionsManagement() {
             </div>
           </div>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// Vault Password Settings Component
+function VaultPasswordSettings() {
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [message, setMessage] = useState("")
+  const [error, setError] = useState("")
+  const [hasVaultPassword, setHasVaultPassword] = useState(false)
+
+  useEffect(() => {
+    // Check if user already has a vault password
+    const checkVaultPassword = async () => {
+      try {
+        const res = await fetch("/api/auth/vault-password")
+        const data = await res.json()
+        setHasVaultPassword(data.hasVaultPassword)
+      } catch (err) {
+        console.error("Failed to check vault password status:", err)
+      }
+    }
+    checkVaultPassword()
+  }, [])
+
+  const handleSetVaultPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setMessage("")
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters long")
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const res = await fetch("/api/auth/vault-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword, action: "set" }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setMessage("Vault password set successfully!")
+        setHasVaultPassword(true)
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+      } else {
+        setError(data.error || "Failed to set vault password")
+      }
+    } catch (err) {
+      setError("Failed to set vault password")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleUpdateVaultPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setMessage("")
+
+    if (!currentPassword) {
+      setError("Current password is required")
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("New passwords do not match")
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setError("New password must be at least 6 characters long")
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      // First verify current password
+      const verifyRes = await fetch("/api/auth/vault-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: currentPassword, action: "verify" }),
+      })
+
+      const verifyData = await verifyRes.json()
+
+      if (!verifyData.valid) {
+        setError("Current password is incorrect")
+        setIsLoading(false)
+        return
+      }
+
+      // Set new password
+      const setRes = await fetch("/api/auth/vault-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword, action: "set" }),
+      })
+
+      const setData = await setRes.json()
+
+      if (setRes.ok) {
+        setMessage("Vault password updated successfully!")
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+      } else {
+        setError(setData.error || "Failed to update vault password")
+      }
+    } catch (err) {
+      setError("Failed to update vault password")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-primary" />
+          <CardTitle>Vault Security</CardTitle>
+        </div>
+        <CardDescription>
+          {hasVaultPassword
+            ? "Update your secrets vault password"
+            : "Set a separate password for your secrets vault"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {!hasVaultPassword && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Note:</strong> Currently, your secrets vault uses your login password. 
+                Set a separate vault password for enhanced security.
+              </p>
+            </div>
+          )}
+
+          <form onSubmit={hasVaultPassword ? handleUpdateVaultPassword : handleSetVaultPassword} className="space-y-4">
+            {hasVaultPassword && (
+              <PasswordInput
+                id="current-vault-password"
+                label="Current Vault Password"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                placeholder="Enter current vault password"
+                required
+                minLength={6}
+              />
+            )}
+
+            <PasswordInput
+              id="new-vault-password"
+              label={hasVaultPassword ? "New Vault Password" : "Vault Password"}
+              value={newPassword}
+              onChange={setNewPassword}
+              placeholder={hasVaultPassword ? "Enter new vault password" : "Enter vault password"}
+              required
+              minLength={6}
+              showGenerator={true}
+            />
+
+            <PasswordInput
+              id="confirm-vault-password"
+              label={hasVaultPassword ? "Confirm New Password" : "Confirm Password"}
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              placeholder="Confirm password"
+              required
+              minLength={6}
+            />
+
+            {error && (
+              <div className="text-sm text-red-600 dark:text-red-400">
+                {error}
+              </div>
+            )}
+
+            {message && (
+              <div className="text-sm text-green-600 dark:text-green-400">
+                {message}
+              </div>
+            )}
+
+            <Button type="submit" disabled={isLoading} className="w-full">
+              {isLoading ? (
+                "Processing..."
+              ) : hasVaultPassword ? (
+                "Update Vault Password"
+              ) : (
+                "Set Vault Password"
+              )}
+            </Button>
+          </form>
+
+          <div className="pt-4 border-t">
+            <p className="text-xs text-muted-foreground">
+              <strong>Security Note:</strong> Your vault password encrypts access to your secrets. 
+              Choose a strong, unique password that you don't use elsewhere.
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )

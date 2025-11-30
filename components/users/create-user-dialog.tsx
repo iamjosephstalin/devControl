@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,8 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { RefreshCw, Eye, EyeOff, Copy, Check } from "lucide-react"
-import { generateStrongPassword } from "@/lib/password-generator"
+import { PasswordInput } from "@/components/ui/password-input"
 
 interface CreateUserDialogProps {
   open: boolean
@@ -38,30 +37,6 @@ export function CreateUserDialog({
     password: "",
     role: "client",
   })
-  const [showPassword, setShowPassword] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  // Auto-generate password when dialog opens
-  useEffect(() => {
-    if (open) {
-      setFormData((prev) => ({
-        ...prev,
-        password: generateStrongPassword(8),
-      }))
-      setShowPassword(false)
-      setCopied(false)
-    }
-  }, [open])
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(formData.password)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error("Failed to copy:", err)
-    }
-  }
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -123,66 +98,15 @@ export function CreateUserDialog({
               required
             />
           </div>
-          <div>
-            <Label htmlFor="password">Password *</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Enter password"
-                  required
-                  className="pr-20"
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => setShowPassword(!showPassword)}
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={copyToClipboard}
-                    title="Copy password"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setFormData({ ...formData, password: generateStrongPassword(8) })
-                  setCopied(false)
-                }}
-                title="Generate new password"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Password is auto-generated. Click the refresh icon to generate a new one.
-            </p>
-          </div>
+          <PasswordInput
+            id="password"
+            label="Password *"
+            value={formData.password}
+            onChange={(password) => setFormData({ ...formData, password })}
+            placeholder="Enter password"
+            required
+            showGenerator={true}
+          />
           <div>
             <Label htmlFor="role">Role</Label>
             <Select

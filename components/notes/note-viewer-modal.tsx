@@ -137,7 +137,7 @@ export function NoteViewerModal({
               </Button>
               {onEdit && (
                 <Button variant="outline" size="sm" onClick={onEdit}>
-                  <Edit className="mr-2 h-4 w-4" />
+                  <Edit className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
                   Edit
                 </Button>
               )}
@@ -148,7 +148,7 @@ export function NoteViewerModal({
                   onClick={onDelete}
                   className="text-destructive hover:text-destructive"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-2 h-4 w-4 text-red-500 dark:text-red-400" />
                   Delete
                 </Button>
               )}

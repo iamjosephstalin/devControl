@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import {
   Dialog,
@@ -20,24 +20,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Shield } from "lucide-react"
 
 interface CreateNoteDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  note?: any
 }
 
 export function CreateNoteDialog({
   open,
   onOpenChange,
+  note,
 }: CreateNoteDialogProps) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit")
   const [formData, setFormData] = useState({
-    title: "",
-    content: "",
-    tags: "",
-    projectId: "none",
+    title: note?.title || "",
+    content: note?.content || "",
+    tags: note?.tags ? JSON.parse(note.tags).join(", ") : "",
+    projectId: note?.project?.id || "none",
+    isEncrypted: note?.isEncrypted || false,
   })
+
+  // Reset form when opening/closing or changing note
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        title: note?.title || "",
+        content: note?.content || "",
+        tags: note?.tags ? JSON.parse(note.tags).join(", ") : "",
+        projectId: note?.project?.id || "none",
+        isEncrypted: note?.isEncrypted || false,
+      })
+    }
+  }, [open, note])
 
   // Fetch projects for the dropdown
   const { data: projects = [] } = useQuery({
@@ -49,10 +66,13 @@ export function CreateNoteDialog({
     },
   })
 
-  const createMutation = useMutation({
+  const mutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch("/api/notes", {
-        method: "POST",
+      const url = note ? `/api/notes/${note.id}` : "/api/notes"
+      const method = note ? "PUT" : "POST"
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
@@ -63,17 +83,20 @@ export function CreateNoteDialog({
           projectId: data.projectId === "none" ? null : data.projectId || null,
         }),
       })
-      if (!res.ok) throw new Error("Failed to create note")
+      if (!res.ok) throw new Error(`Failed to ${note ? "update" : "create"} note`)
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] })
-      setFormData({
-        title: "",
-        content: "",
-        tags: "",
-        projectId: "none",
-      })
+      if (!note) {
+        setFormData({
+          title: "",
+          content: "",
+          tags: "",
+          projectId: "none",
+          isEncrypted: false,
+        })
+      }
       setActiveTab("edit")
       onOpenChange(false)
     },
@@ -102,9 +125,9 @@ export function CreateNoteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Note</DialogTitle>
+          <DialogTitle>{note ? "Edit Note" : "Create New Note"}</DialogTitle>
           <DialogDescription>
-            Add a new note to your knowledge base
+            {note ? "Update your existing note" : "Add a new note to your knowledge base"}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -143,6 +166,33 @@ export function CreateNoteDialog({
             </div>
           </div>
 
+          <div className="flex items-center space-x-3 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+            <input
+              type="checkbox"
+              id="isEncrypted"
+              checked={formData.isEncrypted}
+              onChange={(e) =>
+                setFormData({ ...formData, isEncrypted: e.target.checked })
+              }
+              className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-amber-300 rounded"
+            />
+            <div className="flex items-center space-x-2">
+              <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <Label
+                htmlFor="isEncrypted"
+                className="text-sm font-medium text-amber-800 dark:text-amber-200 cursor-pointer"
+              >
+                Encrypt this note
+              </Label>
+            </div>
+          </div>
+          {formData.isEncrypted && (
+            <div className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/20 p-2 rounded border border-amber-200 dark:border-amber-800">
+              <strong>Note:</strong> Encrypted notes will have their title and content encrypted using AES-256 encryption.
+              The title will be partially visible for identification purposes.
+            </div>
+          )}
+
           <div>
             <Label htmlFor="tags">Tags (comma-separated)</Label>
             <Input
@@ -177,8 +227,8 @@ export function CreateNoteDialog({
                 <div className="flex items-center border rounded-md overflow-hidden">
                   <button
                     className={`px-3 py-1 text-xs ${activeTab === "edit"
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
                       }`}
                     onClick={() => setActiveTab("edit")}
                   >
@@ -186,8 +236,8 @@ export function CreateNoteDialog({
                   </button>
                   <button
                     className={`px-3 py-1 text-xs ${activeTab === "preview"
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
                       }`}
                     onClick={() => setActiveTab("preview")}
                   >
@@ -223,10 +273,10 @@ export function CreateNoteDialog({
               Cancel
             </Button>
             <Button
-              onClick={() => createMutation.mutate(formData)}
-              disabled={createMutation.isPending || !formData.title || !formData.content}
+              onClick={() => mutation.mutate(formData)}
+              disabled={mutation.isPending || !formData.title || !formData.content}
             >
-              {createMutation.isPending ? "Creating..." : "Create Note"}
+              {mutation.isPending ? (note ? "Updating..." : "Creating...") : (note ? "Update Note" : "Create Note")}
             </Button>
           </div>
         </div>
@@ -234,4 +284,3 @@ export function CreateNoteDialog({
     </Dialog>
   )
 }
-

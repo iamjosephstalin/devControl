@@ -81,7 +81,7 @@ export function EnvManager({ projectId }: EnvManagerProps) {
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                         <DialogTrigger asChild>
                             <Button variant="ghost" size="icon">
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                             </Button>
                         </DialogTrigger>
                         <DialogContent>

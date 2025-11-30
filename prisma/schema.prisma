@@ -17,6 +17,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
+  vaultPassword String?   // Separate password for secrets vault
   role          String    @default("client") // "admin" | "client"
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -159,8 +160,10 @@ model Domain {
 model Note {
   id          String   @id @default(cuid())
   title       String
-  content     String   // Markdown content
+  content     String   // Markdown content (encrypted if isEncrypted is true)
   tags        String?  // JSON array of tags
+  isEncrypted Boolean  @default(false)  // Whether the note is encrypted
+  encryptedTitle String? // Encrypted title (if note is encrypted)
   projectId   String?
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   userId      String
