@@ -18,11 +18,15 @@ function getPool(): Pool {
       throw new Error('Missing DATABASE_URL or DIRECT_URL environment variable')
     }
     
+    // Remove sslmode parameter from connection string to avoid conflicts with custom SSL config
+    connectionString = connectionString.replace(/[?&]sslmode=[^&]*/g, '')
+    
     // Parse connection string to extract SSL mode
     let sslConfig: any = false
     
     // In production, always use SSL and handle self-signed certificates
     if (process.env.NODE_ENV === 'production') {
+      // Use the working SSL configuration for all providers
       sslConfig = {
         rejectUnauthorized: false, // Allow self-signed certificates
         require: true

@@ -55,6 +55,18 @@ export const db = {
         return user
       } catch (error: any) {
         console.error('User findUnique error:', error.message)
+        
+        // Log additional SSL error details
+        if (error.message?.includes('certificate') || error.message?.includes('SSL')) {
+          console.error('SSL Error in User findUnique:', {
+            code: error.code,
+            message: error.message,
+            environment: process.env.NODE_ENV,
+            query: sql,
+            params: params?.map((p, i) => i === 0 ? '***' : p) // Hide potentially sensitive first param (email)
+          })
+        }
+        
         return null
       }
     },
