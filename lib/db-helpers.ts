@@ -30,9 +30,10 @@ export const db = {
     findUnique: async (args: { where: { id?: string; email?: string } }) => {
       const { where } = args
       
+      let sql = 'SELECT * FROM "User" WHERE '
+      const params: any[] = []
+      
       try {
-        let sql = 'SELECT * FROM "User" WHERE '
-        const params: any[] = []
         const conditions: string[] = []
         
         if (where.id) {
