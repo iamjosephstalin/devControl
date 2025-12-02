@@ -125,7 +125,12 @@ export function Sidebar() {
             "w-full transition-all",
             isCollapsed ? "justify-center px-2" : "justify-start"
           )}
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => {
+            // Fast logout - clear session and redirect immediately
+            signOut({ redirect: false }).then(() => {
+              window.location.href = "/login"
+            })
+          }}
           title={isCollapsed ? "Sign Out" : undefined}
         >
           <LogOut className={cn("h-4 w-4", !isCollapsed && "mr-2")} />

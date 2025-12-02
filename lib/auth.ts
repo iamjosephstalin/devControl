@@ -26,11 +26,6 @@ export const authOptions: NextAuthOptions = {
             where: { email: credentials.email },
           })
           
-          console.log('Auth: User found:', !!user)
-          if (user) {
-            console.log('Auth: User role:', user.role)
-            console.log('Auth: User data:', { id: user.id, email: user.email, name: user.name, role: user.role })
-          }
 
           if (!user || !user.password) {
             return null
@@ -52,7 +47,6 @@ export const authOptions: NextAuthOptions = {
             role: user.role || "client",
           }
           
-          console.log('Auth: Returning user object:', returnUser)
           return returnUser
         } catch (err) {
           console.error('Auth error:', err)
@@ -70,7 +64,7 @@ export const authOptions: NextAuthOptions = {
   },
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -85,23 +79,15 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        console.log('JWT Callback - User provided:', { id: user.id, email: user.email, role: user.role })
         token.id = user.id
         token.role = user.role
-        console.log('JWT Callback - Token after update:', { id: token.id, role: token.role, email: token.email })
       }
       return token
     },
     async session({ session, token }) {
-      console.log('Session Callback - Token received:', { id: token.id, role: token.role, email: token.email })
       if (session.user && token.id) {
         session.user.id = token.id as string
         session.user.role = token.role as string
-        console.log('Session Callback - Session after update:', { 
-          id: session.user.id, 
-          email: session.user.email, 
-          role: session.user.role 
-        })
       }
       return session
     },

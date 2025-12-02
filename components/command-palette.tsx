@@ -174,7 +174,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       id: "sign-out",
       label: "Sign Out",
       icon: LogOut,
-      action: () => signOut({ callbackUrl: "/login" }),
+      action: () => {
+        // Fast logout - clear session and redirect immediately
+        signOut({ redirect: false }).then(() => {
+          window.location.href = "/login"
+        })
+      },
       keywords: ["sign out", "logout", "exit"],
       group: "Account",
     },

@@ -33,23 +33,34 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid email or password")
       } else {
-        const sessionRes = await fetch("/api/auth/session")
-        const session = await sessionRes.json()
-        const userRole = session?.user?.role || "client"
-
-        console.log('Login debug:', { 
-          selectedRole: role, 
-          userActualRole: userRole, 
-          session: session?.user 
-        })
-
-        // Always redirect based on the user's actual role, ignore UI selection
-        if (userRole === "client") {
-          router.push("/projects")
-        } else {
-          router.push("/")
+        // Wait for JWT token to be properly set in cookies
+        let sessionAttempts = 0
+        let session = null
+        
+        while (sessionAttempts < 10) {
+          await new Promise(resolve => setTimeout(resolve, 300))
+          
+          const sessionRes = await fetch("/api/auth/session")
+          session = await sessionRes.json()
+          
+          if (session?.user?.id) {
+            break
+          }
+          
+          sessionAttempts++
         }
-        router.refresh()
+        
+        if (!session?.user?.id) {
+          setError("Session could not be established. Please try again.")
+          setLoading(false)
+          return
+        }
+
+        const userRole = session.user.role || "client"
+        const redirectUrl = userRole === "client" ? "/projects" : "/"
+        
+        // Redirect to appropriate dashboard
+        window.location.href = redirectUrl
       }
     } catch (err) {
       setError("An error occurred. Please try again.")
