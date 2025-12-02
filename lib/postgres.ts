@@ -20,24 +20,28 @@ function getPool(): Pool {
     
     // Parse connection string to extract SSL mode
     let sslConfig: any = false
-    try {
-      const url = new URL(connectionString.replace(/^postgres(ql)?:/, 'https:'))
-      const sslMode = url.searchParams.get('sslmode') || 'require'
-      
-      // Always use SSL for Supabase connections
-      // Supabase requires SSL but uses self-signed certificates
-      // Set rejectUnauthorized to false to allow self-signed certificates
-      if (sslMode === 'require' || sslMode === 'prefer') {
-        sslConfig = {
-          rejectUnauthorized: false,
-          require: true
-        }
-      }
-    } catch (e) {
-      // If URL parsing fails, default to SSL with rejectUnauthorized false
+    
+    // In production, always use SSL and handle self-signed certificates
+    if (process.env.NODE_ENV === 'production') {
       sslConfig = {
-        rejectUnauthorized: false,
+        rejectUnauthorized: false, // Allow self-signed certificates
         require: true
+      }
+    } else {
+      // Development: parse SSL mode from connection string
+      try {
+        const url = new URL(connectionString.replace(/^postgres(ql)?:/, 'https:'))
+        const sslMode = url.searchParams.get('sslmode')
+        
+        if (sslMode === 'require' || sslMode === 'prefer') {
+          sslConfig = {
+            rejectUnauthorized: false,
+            require: true
+          }
+        }
+      } catch (e) {
+        // If URL parsing fails in development, use no SSL
+        sslConfig = false
       }
     }
     
