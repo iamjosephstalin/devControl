@@ -5,9 +5,26 @@ import { getToken } from "next-auth/jwt"
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
-  // Allow access to login, signup, static files, and API routes without auth
+  // Special handling for login page - redirect authenticated users away
+  if (pathname.startsWith("/login")) {
+    const token = await getToken({ 
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET 
+    })
+    
+    if (token) {
+      console.log('Middleware: Authenticated user accessing login, redirecting to dashboard')
+      // Redirect authenticated users away from login page
+      const role = token.role as string
+      const dashboardUrl = role === "client" ? "/projects" : "/"
+      return NextResponse.redirect(new URL(dashboardUrl, request.url))
+    }
+    
+    return NextResponse.next()
+  }
+
+  // Allow access to signup, static files, and API routes without auth
   if (
-    pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
@@ -34,17 +51,29 @@ export async function middleware(request: NextRequest) {
   }
 
   // For all other routes, validate session and redirect if not authenticated
+  console.log('Middleware: Checking token for path:', pathname)
+  
   const token = await getToken({ 
     req: request,
     secret: process.env.NEXTAUTH_SECRET 
   })
+  
+  console.log('Middleware: Token result:', {
+    hasToken: !!token,
+    tokenId: token?.id,
+    tokenEmail: token?.email,
+    tokenRole: token?.role,
+    pathname
+  })
 
   if (!token) {
+    console.log('Middleware: No token found, redirecting to login for path:', pathname)
     const loginUrl = new URL("/login", request.url)
     loginUrl.searchParams.set("callbackUrl", pathname)
     return NextResponse.redirect(loginUrl)
   }
-
+  
+  console.log('Middleware: Token valid, allowing access to:', pathname)
   return NextResponse.next()
 }
 
