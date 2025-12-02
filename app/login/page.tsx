@@ -37,13 +37,13 @@ export default function LoginPage() {
         const session = await sessionRes.json()
         const userRole = session?.user?.role || "client"
 
-        if (userRole !== role) {
-          setError(`Please switch to ${userRole === 'admin' ? 'Admin' : 'Client'} to log in.`)
-          await signOut({ redirect: false })
-          setLoading(false)
-          return
-        }
+        console.log('Login debug:', { 
+          selectedRole: role, 
+          userActualRole: userRole, 
+          session: session?.user 
+        })
 
+        // Always redirect based on the user's actual role, ignore UI selection
         if (userRole === "client") {
           router.push("/projects")
         } else {
