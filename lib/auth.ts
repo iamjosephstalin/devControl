@@ -19,9 +19,14 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
+          console.log('Auth: Looking up user with email:', credentials.email)
+          console.log('Auth: Environment:', process.env.NODE_ENV)
+          
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
           })
+          
+          console.log('Auth: User found:', !!user)
 
           if (!user || !user.password) {
             return null

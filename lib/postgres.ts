@@ -59,6 +59,13 @@ function getPool(): Pool {
     // Handle connection errors
     pool.on('error', (err) => {
       console.error('Postgres pool error:', err)
+      // If it's an SSL error, log more details
+      if (err.message?.includes('certificate') || err.message?.includes('SSL')) {
+        console.error('SSL Configuration Details:')
+        console.error('- SSL Config:', JSON.stringify(sslConfig, null, 2))
+        console.error('- Connection String (masked):', connectionString.replace(/:[^:@]+@/, ':***@'))
+        console.error('- Environment:', process.env.NODE_ENV)
+      }
     })
   }
   
@@ -74,6 +81,15 @@ export async function query(text: string, params?: any[]) {
     return result
   } catch (error: any) {
     console.error('Postgres query error:', error.message)
+    // Log SSL-related errors in detail
+    if (error.message?.includes('certificate') || error.message?.includes('SSL')) {
+      console.error('SSL Error Details:', {
+        code: error.code,
+        message: error.message,
+        routine: error.routine,
+        environment: process.env.NODE_ENV
+      })
+    }
     throw error
   } finally {
     client.release()
