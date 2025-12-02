@@ -9,7 +9,8 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/login")) {
     const token = await getToken({ 
       req: request,
-      secret: process.env.NEXTAUTH_SECRET 
+      secret: process.env.NEXTAUTH_SECRET,
+      cookieName: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token'
     })
     
     if (token) {
@@ -52,10 +53,12 @@ export async function middleware(request: NextRequest) {
 
   // For all other routes, validate session and redirect if not authenticated
   console.log('Middleware: Checking token for path:', pathname)
+  console.log('Middleware: Cookies:', Object.keys(request.cookies.getAll()))
   
   const token = await getToken({ 
     req: request,
-    secret: process.env.NEXTAUTH_SECRET 
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token'
   })
   
   console.log('Middleware: Token result:', {
