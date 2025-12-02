@@ -1,6 +1,4 @@
-"use client"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import {
   Dialog,
@@ -20,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Shield } from "lucide-react"
+import { Shield, Upload } from "lucide-react"
 
 interface CreateNoteDialogProps {
   open: boolean
@@ -34,7 +32,6 @@ export function CreateNoteDialog({
   note,
 }: CreateNoteDialogProps) {
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit")
   const [formData, setFormData] = useState({
     title: note?.title || "",
     content: note?.content || "",
@@ -42,6 +39,7 @@ export function CreateNoteDialog({
     projectId: note?.project?.id || "none",
     isEncrypted: note?.isEncrypted || false,
   })
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Reset form when opening/closing or changing note
   useEffect(() => {
@@ -97,28 +95,25 @@ export function CreateNoteDialog({
           isEncrypted: false,
         })
       }
-      setActiveTab("edit")
       onOpenChange(false)
     },
   })
 
-  const templates = [
-    {
-      name: "Meeting Notes",
-      content: "# Meeting Notes\n\n**Date:** \n**Attendees:** \n\n## Agenda\n- \n\n## Action Items\n- [ ] \n",
-    },
-    {
-      name: "Bug Report",
-      content: "# Bug Report\n\n**Severity:** High/Medium/Low\n\n## Description\n\n## Steps to Reproduce\n1. \n2. \n\n## Expected Behavior\n\n## Actual Behavior\n",
-    },
-    {
-      name: "Feature Spec",
-      content: "# Feature Specification\n\n## Overview\n\n## User Stories\n- As a user, I want to...\n\n## Technical Implementation\n",
-    },
-  ]
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
 
-  const applyTemplate = (templateContent: string) => {
-    setFormData({ ...formData, content: templateContent })
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      const fileName = file.name.replace(/\.(md|txt)$/i, "")
+      setFormData((prev) => ({
+        ...prev,
+        content: text,
+        title: prev.title || fileName, // Only set title if it's empty
+      }))
+    }
+    reader.readAsText(file)
   }
 
   return (
@@ -212,60 +207,34 @@ export function CreateNoteDialog({
             <div className="flex items-center justify-between mb-2">
               <Label>Content (Markdown) *</Label>
               <div className="flex items-center gap-2">
-                <Select onValueChange={applyTemplate}>
-                  <SelectTrigger className="h-8 w-[150px]">
-                    <SelectValue placeholder="Load Template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((t) => (
-                      <SelectItem key={t.name} value={t.content}>
-                        {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex items-center border rounded-md overflow-hidden">
-                  <button
-                    className={`px-3 py-1 text-xs ${activeTab === "edit"
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                      }`}
-                    onClick={() => setActiveTab("edit")}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className={`px-3 py-1 text-xs ${activeTab === "preview"
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                      }`}
-                    onClick={() => setActiveTab("preview")}
-                  >
-                    Preview
-                  </button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-8"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload File
+                </Button>
+                <Input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept=".md,.txt"
+                />
               </div>
             </div>
 
-            {activeTab === "edit" ? (
-              <Textarea
-                id="content"
-                value={formData.content}
-                onChange={(e) =>
-                  setFormData({ ...formData, content: e.target.value })
-                }
-                placeholder="# Heading&#10;&#10;Your markdown content here..."
-                className="min-h-[300px] font-mono text-sm"
-              />
-            ) : (
-              <div className="min-h-[300px] border rounded-md p-4 prose prose-invert max-w-none overflow-y-auto bg-muted/30">
-                {formData.content ? (
-                  <div className="whitespace-pre-wrap">{formData.content}</div>
-                ) : (
-                  <p className="text-muted-foreground italic">Nothing to preview</p>
-                )}
-              </div>
-            )}
+            <Textarea
+              id="content"
+              value={formData.content}
+              onChange={(e) =>
+                setFormData({ ...formData, content: e.target.value })
+              }
+              placeholder="# Heading&#10;&#10;Your markdown content here..."
+              className="min-h-[300px] font-mono text-sm"
+            />
           </div>
 
           <div className="flex justify-end gap-2">
