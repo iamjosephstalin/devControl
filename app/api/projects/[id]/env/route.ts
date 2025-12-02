@@ -79,11 +79,18 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
         // Verify ownership via the secret itself
         const secret = await prisma.secret.findUnique({
-            where: { id },
-            include: { project: true }
+            where: { id }
         })
 
-        if (!secret || secret.project?.userId !== session.user.id) {
+        if (!secret) {
+            return new NextResponse("Secret not found", { status: 404 })
+        }
+
+        const project = await prisma.project.findUnique({
+            where: { id: secret.projectId }
+        })
+
+        if (!project || project.userId !== session.user.id) {
             return new NextResponse("Unauthorized", { status: 401 })
         }
 

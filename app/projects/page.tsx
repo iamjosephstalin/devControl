@@ -162,7 +162,7 @@ export default function ProjectsPage() {
       >
         <ViewModeToggle
           viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          onViewModeChange={(mode) => setViewMode(mode as ViewMode)}
           gridIcon={<Grid3x3 className="h-4 w-4" />}
           listIcon={<List className="h-4 w-4" />}
         />

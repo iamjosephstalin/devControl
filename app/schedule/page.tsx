@@ -259,7 +259,7 @@ export default function SchedulePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                Today's Tasks
+                Today&apos;s Tasks
               </CardTitle>
               <CardDescription>
                 Tasks due today ({todayTasks.length})

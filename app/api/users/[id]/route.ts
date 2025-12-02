@@ -20,8 +20,7 @@ export async function GET(
 
     // Check if user is admin or viewing own profile
     const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
+      where: { id: userId }
     })
 
     if (currentUser?.role !== "admin" && userId !== params.id) {
@@ -30,23 +29,7 @@ export async function GET(
 
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        createdBy: true,
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+      where: { id: params.id }
     })
 
     if (!user) {
@@ -78,8 +61,7 @@ export async function PUT(
 
     // Check if user is admin
     const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
+      where: { id: userId }
     })
 
     if (currentUser?.role !== "admin") {
@@ -99,15 +81,7 @@ export async function PUT(
 
     const user = await prisma.user.update({
       where: { id: params.id },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      data: updateData
     })
 
     return NextResponse.json(user)
@@ -135,8 +109,7 @@ export async function DELETE(
 
     // Check if user is admin
     const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
+      where: { id: userId }
     })
 
     if (currentUser?.role !== "admin") {

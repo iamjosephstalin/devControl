@@ -17,8 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
+      where: { id: userId }
     })
 
     if (user?.role !== "admin") {
@@ -27,15 +26,6 @@ export async function GET(request: NextRequest) {
 
     // Get all users with basic info
     const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        createdBy: true,
-      },
       orderBy: { createdAt: "desc" },
     })
 
@@ -44,12 +34,7 @@ export async function GET(request: NextRequest) {
       users.map(async (user) => {
         if (user.createdBy) {
           const creator = await prisma.user.findUnique({
-            where: { id: user.createdBy },
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
+            where: { id: user.createdBy }
           })
           return {
             ...user,
@@ -88,8 +73,7 @@ export async function POST(request: NextRequest) {
 
       // Check if user is admin
       const currentUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { role: true },
+        where: { id: session.user.id }
       })
 
       if (currentUser?.role !== "admin") {
@@ -133,15 +117,7 @@ export async function POST(request: NextRequest) {
         name: name || null,
         role: isFirstUser ? "admin" : (role || "client"),
         createdBy: currentUserId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      }
     })
 
     return NextResponse.json(user, { status: 201 })

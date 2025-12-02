@@ -19,24 +19,38 @@ export default async function ProjectDetailsPage({ params }: { params: { id: str
         where: {
             id: params.id,
             userId: session.user.id
-        },
-        include: {
-            tasks: {
-                orderBy: { updatedAt: "desc" },
-                take: 5
-            },
-            servers: true,
-            secrets: true,
-            notes: {
-                orderBy: { updatedAt: "desc" },
-                take: 5
-            }
         }
     })
 
     if (!project) {
         notFound()
     }
+
+    // Fetch related data separately
+    const [tasks, servers, secrets, notes] = await Promise.all([
+        prisma.task.findMany({
+            where: { projectId: params.id },
+            orderBy: { updatedAt: "desc" },
+            take: 5
+        }),
+        prisma.server.findMany({
+            where: { projectId: params.id }
+        }),
+        prisma.secret.findMany({
+            where: { projectId: params.id }
+        }),
+        prisma.note.findMany({
+            where: { projectId: params.id },
+            orderBy: { updatedAt: "desc" },
+            take: 5
+        })
+    ])
+
+    // Add the fetched data to the project object
+    project.tasks = tasks
+    project.servers = servers
+    project.secrets = secrets
+    project.notes = notes
 
 
 

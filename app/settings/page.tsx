@@ -297,7 +297,7 @@ export default function SettingsPage() {
               </div>
               <div className="pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> Use "mod" for Cmd on Mac or Ctrl on Windows/Linux.
+                  <strong>Note:</strong> Use &quot;mod&quot; for Cmd on Mac or Ctrl on Windows/Linux.
                   Format: mod+k, mod+shift+p, etc.
                 </p>
               </div>
@@ -493,7 +493,7 @@ function UsersManagement() {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground">You don't have permission to manage users.</p>
+          <p className="text-muted-foreground">You don&apos;t have permission to manage users.</p>
         </CardContent>
       </Card>
     )
@@ -601,7 +601,7 @@ function PermissionsManagement() {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground">You don't have permission to manage permissions.</p>
+          <p className="text-muted-foreground">You don&apos;t have permission to manage permissions.</p>
         </CardContent>
       </Card>
     )
@@ -887,7 +887,7 @@ function VaultPasswordSettings() {
           <div className="pt-4 border-t">
             <p className="text-xs text-muted-foreground">
               <strong>Security Note:</strong> Your vault password encrypts access to your secrets. 
-              Choose a strong, unique password that you don't use elsewhere.
+              Choose a strong, unique password that you don&apos;t use elsewhere.
             </p>
           </div>
         </div>

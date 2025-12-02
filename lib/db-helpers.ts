@@ -17,6 +17,7 @@ const tableMap: Record<string, string> = {
   'VerificationToken': 'VerificationToken',
   'Domain': 'Domain',
   'Activity': 'Activity',
+  'Integration': 'Integration',
 }
 
 function getTableName(modelName: string): string {
@@ -87,7 +88,7 @@ export const db = {
         
         if (args?.orderBy) {
           const [field, direction] = Object.entries(args.orderBy)[0]
-          sql += ` ORDER BY "${field}" ${direction.toUpperCase()}`
+          sql += ` ORDER BY "${field}" ${String(direction).toUpperCase()}`
         }
         
         return await queryMany(sql, params)
@@ -265,7 +266,7 @@ export const db = {
         
         if (args?.orderBy) {
           const [field, direction] = Object.entries(args.orderBy)[0]
-          sql += ` ORDER BY "${field}" ${direction.toUpperCase()}`
+          sql += ` ORDER BY "${field}" ${String(direction).toUpperCase()}`
         }
         
         if (args?.take) {
@@ -284,7 +285,7 @@ export const db = {
         const { id, createdAt, updatedAt, ...dataWithoutId } = args.data
         
         // Check if table has timestamp columns (most tables do)
-        const hasTimestamps = ['User', 'Project', 'Task', 'Note', 'Secret', 'Server', 'Domain', 'Activity', 'Deployment', 'ProjectAssignment'].includes(tableName)
+        const hasTimestamps = ['User', 'Project', 'Task', 'Note', 'Secret', 'Server', 'Domain', 'Activity', 'Deployment', 'ProjectAssignment', 'Integration'].includes(tableName)
         
         // Build fields array
         const fields = ['id', ...Object.keys(dataWithoutId)]
@@ -331,6 +332,25 @@ export const db = {
         throw error
       }
     },
+    update: async (args: { where: { id: string }; data: any }) => {
+      try {
+        const updateFields = Object.keys(args.data)
+        const updateValues = Object.values(args.data)
+        const setClause = updateFields.map((f, i) => `"${f}" = $${i + 1}`).join(', ')
+        
+        const sql = `
+          UPDATE "${tableName}"
+          SET ${setClause}
+          WHERE id = $${updateFields.length + 1}
+          RETURNING *
+        `
+        
+        return await queryOne(sql, [...updateValues, args.where.id])
+      } catch (error: any) {
+        console.error(`${tableName} update error:`, error)
+        throw error
+      }
+    },
     updateMany: async (args: { where: { [key: string]: any }; data: any }) => {
       try {
         const updateFields = Object.keys(args.data)
@@ -358,6 +378,39 @@ export const db = {
         return { count: result.length }
       } catch (error: any) {
         console.error(`${tableName} updateMany error:`, error)
+        throw error
+      }
+    },
+    upsert: async (args: { where: any; update: any; create: any }) => {
+      try {
+        // Try to find existing record first
+        const existing = await db.getTable(tableName).findFirst({ where: args.where })
+        
+        if (existing) {
+          // Update existing record
+          if (Object.keys(args.update).length > 0) {
+            return await db.getTable(tableName).update({ 
+              where: { id: existing.id }, 
+              data: args.update 
+            })
+          }
+          return existing
+        } else {
+          // Create new record
+          return await db.getTable(tableName).create({ data: args.create })
+        }
+      } catch (error: any) {
+        console.error(`${tableName} upsert error:`, error)
+        throw error
+      }
+    },
+    delete: async (args: { where: { id: string } }) => {
+      try {
+        const sql = `DELETE FROM "${tableName}" WHERE id = $1 RETURNING *`
+        await query(sql, [args.where.id])
+        return { id: args.where.id }
+      } catch (error: any) {
+        console.error(`${tableName} delete error:`, error)
         throw error
       }
     },
@@ -404,5 +457,6 @@ export const prisma = {
   verificationToken: db.getTable('VerificationToken'),
   domain: db.getTable('Domain'),
   activity: db.getTable('Activity'),
+  integration: db.getTable('Integration'),
 }
 

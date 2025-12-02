@@ -9,18 +9,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     try {
         const deployment = await prisma.deployment.findUnique({
-            where: { id: params.id },
-            include: {
-                project: {
-                    select: {
-                        userId: true
-                    }
-                }
-            }
+            where: { id: params.id }
         })
 
         if (!deployment) return new NextResponse("Deployment not found", { status: 404 })
-        if (deployment.project.userId !== session.user.id) return new NextResponse("Unauthorized", { status: 401 })
+        
+        // Get the project to check authorization
+        const project = await prisma.project.findUnique({
+            where: { id: deployment.projectId }
+        })
+        
+        if (!project || project.userId !== session.user.id) {
+            return new NextResponse("Unauthorized", { status: 401 })
+        }
 
         return NextResponse.json(deployment)
     } catch (error) {

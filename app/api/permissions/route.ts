@@ -12,8 +12,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
+      where: { id: session.user.id }
     })
 
     if (user?.role !== "admin") {
@@ -26,24 +25,14 @@ export async function GET(request: NextRequest) {
     if (userId) {
       const permissions = await prisma.permission.findMany({
         where: { userId },
-        orderBy: [{ resource: "asc" }, { action: "asc" }],
+        orderBy: { resource: "asc" },
       })
       return NextResponse.json(permissions)
     }
 
     // Get all permissions grouped by user
     const permissions = await prisma.permission.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-      },
-      orderBy: [{ userId: "asc" }, { resource: "asc" }, { action: "asc" }],
+      orderBy: { userId: "asc" },
     })
 
     return NextResponse.json(permissions)
@@ -64,8 +53,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
+      where: { id: session.user.id }
     })
 
     if (user?.role !== "admin") {
@@ -116,8 +104,7 @@ export async function DELETE(request: NextRequest) {
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
+      where: { id: session.user.id }
     })
 
     if (user?.role !== "admin") {

@@ -1,10 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
 import {
   ExternalLink,
   Zap,
@@ -15,479 +16,384 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  Settings,
+  Plus,
+  Search
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useState } from "react"
+import { fetchIntegrations, getIntegrationToken } from "@/lib/integrations"
+import { IntegrationCard } from "@/components/integrations/integration-card"
+import { CreateDeploymentDialog } from "@/components/integrations/create-deployment-dialog"
+import { DeploymentDetailsModal } from "@/components/deployments/deployment-details-modal"
+import { IntegrationDiagnostics } from "@/components/debug/integration-diagnostics"
 import { fetchVercelProjects } from "@/lib/vercel"
 import { fetchNetlifySites } from "@/lib/netlify"
 import { fetchRailwayProjects } from "@/lib/railway"
 import { fetchRenderServices } from "@/lib/render"
 
-type Provider = "vercel" | "netlify" | "railway" | "render"
-
 export default function DeploymentsPage() {
-  const [activeProvider, setActiveProvider] = useState<Provider>("vercel")
-  const [tokens, setTokens] = useState<Record<Provider, string>>({
-    vercel: "",
-    netlify: "",
-    railway: "",
-    render: "",
+  const [activeTab, setActiveTab] = useState<'deployments' | 'integrations'>('deployments')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // Fetch all integrations
+  const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
+    queryKey: ['integrations'],
+    queryFn: fetchIntegrations
   })
-  const [connectedProviders, setConnectedProviders] = useState<Set<Provider>>(new Set())
 
-  const handleTokenChange = (provider: Provider, value: string) => {
-    setTokens((prev) => ({ ...prev, [provider]: value }))
-  }
+  // Filter deployment integrations
+  const deploymentIntegrationTypes = ['vercel', 'netlify', 'railway', 'render', 'aws', 'heroku', 'azure', 'gcp']
+  const deploymentIntegrations = integrations.filter(i => 
+    deploymentIntegrationTypes.includes(i.type) && i.status === 'connected'
+  )
 
-  const handleConnect = (provider: Provider) => {
-    if (tokens[provider]) {
-      setConnectedProviders((prev) => new Set(prev).add(provider))
-    }
-  }
+  // Filter by specific deployment services
+  const vercelIntegrations = integrations.filter(i => i.type === 'vercel' && i.status === 'connected')
+  const netlifyIntegrations = integrations.filter(i => i.type === 'netlify' && i.status === 'connected')
+  const railwayIntegrations = integrations.filter(i => i.type === 'railway' && i.status === 'connected')
+  const renderIntegrations = integrations.filter(i => i.type === 'render' && i.status === 'connected')
 
-  const handleDisconnect = (provider: Provider) => {
-    setConnectedProviders((prev) => {
-      const next = new Set(prev)
-      next.delete(provider)
-      return next
-    })
-    setTokens((prev) => ({ ...prev, [provider]: "" }))
-  }
-
-  // Vercel Query
+  // Fetch deployments from Vercel integrations
   const { data: vercelProjects = [], isLoading: vercelLoading } = useQuery({
-    queryKey: ["vercel-projects", tokens.vercel],
-    queryFn: () => fetchVercelProjects(tokens.vercel),
-    enabled: connectedProviders.has("vercel") && !!tokens.vercel,
+    queryKey: ["vercel-projects", vercelIntegrations.map(i => i.id)],
+    queryFn: async () => {
+      const allProjects = []
+      for (const integration of vercelIntegrations) {
+        try {
+          const token = await getIntegrationToken(integration.id)
+          const teamId = integration.config?.teamId
+          const projects = await fetchVercelProjects(token, teamId)
+          allProjects.push(...projects.map(project => ({ 
+            ...project, 
+            integration: integration.name,
+            provider: 'vercel',
+            type: 'project'
+          })))
+        } catch (error) {
+          console.error(`Failed to fetch projects from ${integration.name}:`, error)
+        }
+      }
+      return allProjects
+    },
+    enabled: vercelIntegrations.length > 0,
   })
 
-  // Netlify Query
-  const { data: netlifySites = [], isLoading: netlifyLoading } = useQuery({
-    queryKey: ["netlify-sites", tokens.netlify],
-    queryFn: () => fetchNetlifySites(tokens.netlify),
-    enabled: connectedProviders.has("netlify") && !!tokens.netlify,
+  // Fetch deployments from Netlify integrations
+  const { data: netlifyProjects = [], isLoading: netlifyLoading } = useQuery({
+    queryKey: ["netlify-sites", netlifyIntegrations.map(i => i.id)],
+    queryFn: async () => {
+      const allSites = []
+      for (const integration of netlifyIntegrations) {
+        try {
+          const token = await getIntegrationToken(integration.id)
+          const sites = await fetchNetlifySites(token)
+          allSites.push(...sites.map(site => ({ 
+            ...site, 
+            integration: integration.name,
+            provider: 'netlify',
+            type: 'site'
+          })))
+        } catch (error) {
+          console.error(`Failed to fetch sites from ${integration.name}:`, error)
+        }
+      }
+      return allSites
+    },
+    enabled: netlifyIntegrations.length > 0,
   })
 
-  // Railway Query
+  // Fetch deployments from Railway integrations
   const { data: railwayProjects = [], isLoading: railwayLoading } = useQuery({
-    queryKey: ["railway-projects", tokens.railway],
-    queryFn: () => fetchRailwayProjects(tokens.railway),
-    enabled: connectedProviders.has("railway") && !!tokens.railway,
+    queryKey: ["railway-projects", railwayIntegrations.map(i => i.id)],
+    queryFn: async () => {
+      const allProjects = []
+      for (const integration of railwayIntegrations) {
+        try {
+          const token = await getIntegrationToken(integration.id)
+          const projects = await fetchRailwayProjects(token)
+          allProjects.push(...projects.map(project => ({ 
+            ...project, 
+            integration: integration.name,
+            provider: 'railway',
+            type: 'project'
+          })))
+        } catch (error) {
+          console.error(`Failed to fetch projects from ${integration.name}:`, error)
+        }
+      }
+      return allProjects
+    },
+    enabled: railwayIntegrations.length > 0,
   })
 
-  // Render Query
+  // Fetch deployments from Render integrations
   const { data: renderServices = [], isLoading: renderLoading } = useQuery({
-    queryKey: ["render-services", tokens.render],
-    queryFn: () => fetchRenderServices(tokens.render),
-    enabled: connectedProviders.has("render") && !!tokens.render,
+    queryKey: ["render-services", renderIntegrations.map(i => i.id)],
+    queryFn: async () => {
+      const allServices = []
+      for (const integration of renderIntegrations) {
+        try {
+          const token = await getIntegrationToken(integration.id)
+          const services = await fetchRenderServices(token)
+          allServices.push(...services.map(service => ({ 
+            ...service, 
+            integration: integration.name,
+            provider: 'render',
+            type: 'service'
+          })))
+        } catch (error) {
+          console.error(`Failed to fetch services from ${integration.name}:`, error)
+        }
+      }
+      return allServices
+    },
+    enabled: renderIntegrations.length > 0,
   })
 
-  const providerConfig = {
-    vercel: {
-      name: "Vercel",
-      icon: Zap,
-      color: "text-black dark:text-white",
-      tokenUrl: "https://vercel.com/account/tokens",
-      tokenPlaceholder: "vercel_xxxxxxxxxxxx",
-      description: "Connect your Vercel account to view deployments and projects",
-    },
-    netlify: {
-      name: "Netlify",
-      icon: Globe,
-      color: "text-[#00C7B7]",
-      tokenUrl: "https://app.netlify.com/user/applications#personal-access-tokens",
-      tokenPlaceholder: "nfp_xxxxxxxxxxxx",
-      description: "Connect your Netlify account to view sites and deployments",
-    },
-    railway: {
-      name: "Railway",
-      icon: Rocket,
-      color: "text-[#0A0D0D] dark:text-white",
-      tokenUrl: "https://railway.app/account/tokens",
-      tokenPlaceholder: "railway_xxxxxxxxxxxx",
-      description: "Connect your Railway account to view projects and services",
-    },
-    render: {
-      name: "Render",
-      icon: Server,
-      color: "text-[#46E3B7]",
-      tokenUrl: "https://dashboard.render.com/account/api-keys",
-      tokenPlaceholder: "rnd_xxxxxxxxxxxx",
-      description: "Connect your Render account to view services and deployments",
-    },
+  // Combine all deployments
+  const allDeployments = [...vercelProjects, ...netlifyProjects, ...railwayProjects, ...renderServices]
+
+  // Filter deployments based on search
+  const filteredDeployments = allDeployments.filter(deployment => {
+    if (!searchTerm) return true
+    const name = deployment.name || ''
+    const integration = deployment.integration || ''
+    return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           integration.toLowerCase().includes(searchTerm.toLowerCase())
+  })
+
+  const isLoading = vercelLoading || netlifyLoading || railwayLoading || renderLoading || integrationsLoading
+
+  const getProviderIcon = (provider: string) => {
+    switch (provider) {
+      case 'vercel': return <Zap className="h-4 w-4" />
+      case 'netlify': return <Globe className="h-4 w-4" />
+      case 'railway': return <Rocket className="h-4 w-4" />
+      case 'render': return <Server className="h-4 w-4" />
+      case 'aws': return <span className="text-base">☁️</span>
+      case 'heroku': return <span className="text-base">💜</span>
+      case 'azure': return <span className="text-base">🔷</span>
+      case 'gcp': return <span className="text-base">🌐</span>
+      default: return <Server className="h-4 w-4" />
+    }
   }
 
-  const renderConnectCard = (provider: Provider) => {
-    const config = providerConfig[provider]
-    const Icon = config.icon
-    const isConnected = connectedProviders.has(provider)
-
-    if (!isConnected) {
-      return (
-        <Card className="max-w-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Icon className={`h-5 w-5 ${config.color}`} />
-              Connect {config.name}
-            </CardTitle>
-            <CardDescription>{config.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor={`${provider}-token`}>{config.name} API Token</Label>
-              <Input
-                id={`${provider}-token`}
-                type="password"
-                value={tokens[provider]}
-                onChange={(e) => handleTokenChange(provider, e.target.value)}
-                placeholder={config.tokenPlaceholder}
-                className="mt-2 font-mono"
-              />
-              <p className="text-sm text-muted-foreground mt-2">
-                Create a token at{" "}
-                <a
-                  href={config.tokenUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  {config.tokenUrl.replace("https://", "")}
-                </a>
-              </p>
-            </div>
-            <Button onClick={() => handleConnect(provider)} disabled={!tokens[provider]}>
-              Connect
-            </Button>
-          </CardContent>
-        </Card>
-      )
+  const getStatusBadge = (deployment: any) => {
+    if (deployment.provider === 'vercel') {
+      const state = deployment.latestDeployment?.state || 'unknown'
+      switch (state) {
+        case 'READY': return <Badge variant="default" className="text-xs">Live</Badge>
+        case 'BUILDING': return <Badge variant="secondary" className="text-xs">Building</Badge>
+        case 'ERROR': return <Badge variant="destructive" className="text-xs">Error</Badge>
+        default: return <Badge variant="outline" className="text-xs">{state}</Badge>
+      }
+    } else if (deployment.provider === 'netlify') {
+      const state = deployment.state || deployment.published_deploy?.state || 'unknown'
+      switch (state) {
+        case 'current': 
+        case 'ready': return <Badge variant="default" className="text-xs">Live</Badge>
+        case 'building': return <Badge variant="secondary" className="text-xs">Building</Badge>
+        case 'error': return <Badge variant="destructive" className="text-xs">Error</Badge>
+        default: return <Badge variant="outline" className="text-xs">{state}</Badge>
+      }
+    } else {
+      // Railway/Render - basic status
+      return <Badge variant="default" className="text-xs">Active</Badge>
     }
-
-    return null
   }
 
-  const renderProjects = (provider: Provider) => {
-    const config = providerConfig[provider]
-    const Icon = config.icon
-
-    if (provider === "vercel") {
-      const isLoading = vercelLoading
-      const projects = vercelProjects
-
-      if (isLoading) {
-        return (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        )
-      }
-
-      if (projects.length === 0) {
-        return (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground">No projects found</p>
-            </CardContent>
-          </Card>
-        )
-      }
-
-      return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project: any) => (
-            <Card key={project.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Icon className={`h-5 w-5 ${config.color}`} />
-                      {project.name}
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      {project.framework || "No framework"}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="text-xs text-muted-foreground font-mono">
-                    Created {formatDate(new Date(project.createdAt))}
-                  </div>
-                  {project.latestDeployment && (
-                    <div>
-                      <Badge
-                        variant={
-                          project.latestDeployment.state === "READY"
-                            ? "default"
-                            : "outline"
-                        }
-                      >
-                        {project.latestDeployment.state}
-                      </Badge>
-                    </div>
-                  )}
-                  <Button variant="outline" size="sm" className="w-full" asChild>
-                    <a
-                      href={`https://vercel.com/${project.accountId}/${project.name}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View on Vercel <ExternalLink className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )
+  const getDeploymentUrl = (deployment: any) => {
+    if (deployment.provider === 'vercel') {
+      return `https://vercel.com/${deployment.accountId}/${deployment.name}`
+    } else if (deployment.provider === 'netlify') {
+      return deployment.url || deployment.ssl_url
+    } else if (deployment.provider === 'railway') {
+      return deployment.url || '#'
+    } else if (deployment.provider === 'render') {
+      return deployment.serviceUrl || '#'
     }
-
-    if (provider === "netlify") {
-      const isLoading = netlifyLoading
-      const sites = netlifySites
-
-      if (isLoading) {
-        return (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        )
-      }
-
-      if (sites.length === 0) {
-        return (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground">No sites found</p>
-            </CardContent>
-          </Card>
-        )
-      }
-
-      return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {sites.map((site: any) => (
-            <Card key={site.id}>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Icon className={`h-5 w-5 ${config.color}`} />
-                  {site.name}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {site.build_settings?.branch || "No branch"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="text-xs text-muted-foreground font-mono">
-                    Updated {formatDate(new Date(site.updated_at))}
-                  </div>
-                  <Badge variant={site.state === "ready" ? "default" : "outline"}>
-                    {site.state}
-                  </Badge>
-                  {site.url && (
-                    <Button variant="outline" size="sm" className="w-full" asChild>
-                      <a href={site.url} target="_blank" rel="noopener noreferrer">
-                        Visit Site <ExternalLink className="ml-2 h-4 w-4" />
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )
-    }
-
-    if (provider === "railway") {
-      const isLoading = railwayLoading
-      const projects = railwayProjects
-
-      if (isLoading) {
-        return (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        )
-      }
-
-      if (projects.length === 0) {
-        return (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground">No projects found</p>
-            </CardContent>
-          </Card>
-        )
-      }
-
-      return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project: any) => (
-            <Card key={project.id}>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Icon className={`h-5 w-5 ${config.color}`} />
-                  {project.name}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {project.description || "No description"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="text-xs text-muted-foreground font-mono">
-                    Created {formatDate(new Date(project.createdAt))}
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full" asChild>
-                    <a
-                      href={`https://railway.app/project/${project.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View on Railway <ExternalLink className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )
-    }
-
-    if (provider === "render") {
-      const isLoading = renderLoading
-      const services = renderServices
-
-      if (isLoading) {
-        return (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        )
-      }
-
-      if (services.length === 0) {
-        return (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground">No services found</p>
-            </CardContent>
-          </Card>
-        )
-      }
-
-      return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {services.map((service: any) => (
-            <Card key={service.id}>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Icon className={`h-5 w-5 ${config.color}`} />
-                  {service.name}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {service.type.replace("_", " ")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="text-xs text-muted-foreground font-mono">
-                    Updated {formatDate(new Date(service.updatedAt))}
-                  </div>
-                  <Badge variant={service.suspended ? "outline" : "default"}>
-                    {service.suspended ? "Suspended" : "Active"}
-                  </Badge>
-                  {service.serviceDetails?.url && (
-                    <Button variant="outline" size="sm" className="w-full" asChild>
-                      <a
-                        href={service.serviceDetails.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Visit Service <ExternalLink className="ml-2 h-4 w-4" />
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )
-    }
-
-    return null
+    return '#'
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold font-mono tracking-tight">
-          Deployment Integrations
-        </h1>
-        <p className="text-muted-foreground">
-          Connect and manage your deployments across multiple platforms
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight truncate">Deployments</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Manage your deployments and hosting integrations
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <CreateDeploymentDialog />
+            <Button 
+              variant="outline" 
+              onClick={() => setActiveTab(activeTab === "deployments" ? "integrations" : "deployments")}
+              className="whitespace-nowrap"
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              {activeTab === "deployments" ? "Manage Integrations" : "View Deployments"}
+            </Button>
+            <IntegrationDiagnostics />
+          </div>
+        </div>
       </div>
 
-      <Tabs value={activeProvider} onValueChange={(v) => setActiveProvider(v as Provider)}>
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
-          {Object.entries(providerConfig).map(([key, config]) => {
-            const Icon = config.icon
-            const isConnected = connectedProviders.has(key as Provider)
-            return (
-              <TabsTrigger key={key} value={key} className="flex items-center gap-2">
-                <Icon className={`h-4 w-4 ${config.color}`} />
-                {config.name}
-                {isConnected && (
-                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                )}
-              </TabsTrigger>
-            )
-          })}
-        </TabsList>
-
-        {Object.keys(providerConfig).map((provider) => {
-          const config = providerConfig[provider as Provider]
-          const isConnected = connectedProviders.has(provider as Provider)
-
-          return (
-            <TabsContent key={provider} value={provider} className="mt-6">
-              {!isConnected ? (
-                renderConnectCard(provider as Provider)
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold font-mono">
-                        {config.name} Projects
-                      </h2>
-                      <p className="text-muted-foreground">
-                        {config.description}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDisconnect(provider as Provider)}
-                    >
-                      Disconnect
-                    </Button>
-                  </div>
-                  {renderProjects(provider as Provider)}
-                </div>
+      {activeTab === 'deployments' ? (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search deployments..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full max-w-md"
+                />
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground whitespace-nowrap">
+              {filteredDeployments.length} deployment{filteredDeployments.length === 1 ? '' : 's'}
+              {deploymentIntegrations.length > 0 && (
+                <span className="ml-2">
+                  from {deploymentIntegrations.length} account{deploymentIntegrations.length === 1 ? '' : 's'}
+                </span>
               )}
-            </TabsContent>
-          )
-        })}
-      </Tabs>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <div className="text-muted-foreground text-sm">Loading deployments...</div>
+              </div>
+            </div>
+          ) : filteredDeployments.length === 0 ? (
+            <Card className="w-full">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <div className="text-center space-y-4 max-w-md">
+                  <div className="text-muted-foreground">
+                    {deploymentIntegrations.length === 0 
+                      ? "No deployment integrations found. Connect your Vercel, Netlify, Railway, or Render account to get started."
+                      : "No deployments found in your connected accounts."
+                    }
+                  </div>
+                  {deploymentIntegrations.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Switch to the Integrations tab to add your deployment accounts.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Deployments from your connected accounts will appear here automatically.
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {filteredDeployments.map((deployment: any) => (
+                <Card key={`${deployment.provider}-${deployment.id}`} className="h-full">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-lg flex items-center gap-2 truncate">
+                          {getProviderIcon(deployment.provider)}
+                          <span className="truncate">{deployment.name}</span>
+                        </CardTitle>
+                        <CardDescription className="mt-1 truncate">
+                          {deployment.framework || deployment.type || "Deployment"}
+                        </CardDescription>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {getStatusBadge(deployment)}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-3">
+                      <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                        <div>
+                          Created {formatDate(new Date(deployment.createdAt || deployment.created_at || Date.now()))}
+                        </div>
+                        <div className="truncate">
+                          via {deployment.integration}
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <DeploymentDetailsModal 
+                          deployment={deployment} 
+                          integration={deploymentIntegrations.find(i => i.name === deployment.integration)}
+                        >
+                          <Button variant="outline" size="sm" className="flex-1">
+                            View Details
+                          </Button>
+                        </DeploymentDetailsModal>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          asChild
+                        >
+                          <a
+                            href={getDeploymentUrl(deployment)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="text-center sm:text-left">
+            <h2 className="text-xl font-semibold mb-2">Connected Deployment Accounts</h2>
+            <p className="text-sm text-muted-foreground">
+              Manage your hosting platform integrations and API tokens
+            </p>
+          </div>
+          
+          {integrationsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <div className="text-muted-foreground text-sm">Loading integrations...</div>
+              </div>
+            </div>
+          ) : deploymentIntegrations.length === 0 ? (
+            <Card className="w-full">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <div className="text-center space-y-4 max-w-md">
+                  <div className="text-muted-foreground">
+                    No deployment integrations found. Connect your Vercel, Netlify, Railway, or Render account to get started.
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    You&apos;ll need API tokens from your deployment platforms to get started.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {deploymentIntegrations.map((integration) => (
+                <IntegrationCard key={integration.id} integration={integration} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
-

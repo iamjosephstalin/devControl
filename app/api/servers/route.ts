@@ -23,15 +23,6 @@ export async function GET(request: NextRequest) {
 
     const servers = await prisma.server.findMany({
       where,
-      include: {
-        domains: true,
-        project: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
       orderBy: { createdAt: "desc" },
     })
 
@@ -96,4 +87,5 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
 

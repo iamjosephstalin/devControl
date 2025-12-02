@@ -17,18 +17,16 @@ export async function POST(req: Request) {
 
         if (!project) return new NextResponse("Project not found", { status: 404 })
 
-        // Update tasks in a transaction
-        await prisma.$transaction(
-            tasks.map((task: any) =>
-                prisma.task.update({
-                    where: { id: task.id },
-                    data: {
-                        status: task.status,
-                        position: task.position,
-                    },
-                })
-            )
-        )
+        // Update tasks individually
+        for (const task of tasks) {
+            await prisma.task.update({
+                where: { id: task.id },
+                data: {
+                    status: task.status,
+                    position: task.position,
+                },
+            })
+        }
 
         return NextResponse.json({ success: true })
     } catch (error) {

@@ -25,14 +25,6 @@ export async function GET(request: NextRequest) {
     const tasks = await prisma.task.findMany({
       where,
       orderBy: { position: "asc" },
-      include: {
-        project: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
     })
 
     return NextResponse.json(tasks)
@@ -79,4 +71,5 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
 

@@ -1,13 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverActions: true,
-  },
   // Production optimizations
   reactStrictMode: true,
   swcMinify: true,
-  // Exclude packages with native modules from bundling
-  serverComponentsExternalPackages: ['ssh2'],
   // Exclude native modules from webpack bundling
   webpack: (config, { isServer }) => {
     if (isServer) {

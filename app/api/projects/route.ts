@@ -16,8 +16,7 @@ export async function GET(request: NextRequest) {
 
     // Get user role
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
+      where: { id: userId }
     })
 
     let projects
@@ -26,34 +25,11 @@ export async function GET(request: NextRequest) {
       // Admins see all projects
       projects = await prisma.project.findMany({
         orderBy: { updatedAt: "desc" },
-        include: {
-          tasks: true,
-          notes: true,
-          assignments: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-        },
       })
     } else {
       // Clients see only assigned projects
       const assignments = await prisma.projectAssignment.findMany({
         where: { userId },
-        include: {
-          project: {
-            include: {
-              tasks: true,
-              notes: true,
-            },
-          },
-        },
       })
       projects = assignments.map((a) => a.project)
     }
@@ -103,4 +79,5 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions, validateSessionUser } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { prisma } from "@/lib/db-helpers"
 import { encrypt, decrypt } from "@/lib/encryption"
 
 export async function GET(
@@ -22,14 +22,6 @@ export async function GET(
       where: {
         id: params.id,
         userId,
-      },
-      include: {
-        project: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
       },
     })
 

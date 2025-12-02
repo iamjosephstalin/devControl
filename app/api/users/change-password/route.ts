@@ -30,8 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Get user with password
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { password: true },
+      where: { id: session.user.id }
     })
 
     if (!user || !user.password) {

@@ -23,14 +23,6 @@ export async function GET(request: NextRequest) {
 
     const secrets = await prisma.secret.findMany({
       where,
-      include: {
-        project: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
       orderBy: { createdAt: "desc" },
     })
 
@@ -95,4 +87,5 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
 

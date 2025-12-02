@@ -24,8 +24,7 @@ export async function GET(request: NextRequest) {
 
     // Clients can only see their own assignments
     const currentUser = await prisma.user.findUnique({
-      where: { id: sessionUserId },
-      select: { role: true },
+      where: { id: sessionUserId }
     })
 
     if (currentUser?.role !== "admin" && userId && userId !== sessionUserId) {
@@ -34,23 +33,6 @@ export async function GET(request: NextRequest) {
 
     const assignments = await prisma.projectAssignment.findMany({
       where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-        project: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-          },
-        },
-      },
       orderBy: { createdAt: "desc" },
     })
 
@@ -66,9 +48,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = await validateSessionUser(session?.user?.id)
+    const sessionUserId = await validateSessionUser(session?.user?.id)
     
-    if (!userId) {
+    if (!sessionUserId) {
       return NextResponse.json({ 
         error: "Unauthorized. Please log out and log back in." 
       }, { status: 401 })
@@ -76,8 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
+      where: { id: sessionUserId }
     })
 
     if (user?.role !== "admin") {
@@ -109,23 +90,6 @@ export async function POST(request: NextRequest) {
         projectId,
         role: role || "viewer",
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-        project: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-          },
-        },
-      },
     })
 
     return NextResponse.json(assignment, { status: 201 })
@@ -140,9 +104,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = await validateSessionUser(session?.user?.id)
+    const sessionUserId = await validateSessionUser(session?.user?.id)
     
-    if (!userId) {
+    if (!sessionUserId) {
       return NextResponse.json({ 
         error: "Unauthorized. Please log out and log back in." 
       }, { status: 401 })
@@ -150,8 +114,7 @@ export async function DELETE(request: NextRequest) {
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
+      where: { id: sessionUserId }
     })
 
     if (user?.role !== "admin") {

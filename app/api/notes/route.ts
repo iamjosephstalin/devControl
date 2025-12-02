@@ -23,14 +23,6 @@ export async function GET(request: NextRequest) {
 
     const notes = await prisma.note.findMany({
       where,
-      include: {
-        project: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
       orderBy: { updatedAt: "desc" },
     })
 
@@ -115,4 +107,5 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
 

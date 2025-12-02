@@ -1,7 +1,7 @@
 import { getServerSession, NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/db"
+import { prisma } from "@/lib/db-helpers"
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -81,8 +81,7 @@ export async function requireAuth() {
   
   // Verify user exists in database (important after database migrations)
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true },
+    where: { id: session.user.id }
   })
   
   if (!user) {
@@ -102,8 +101,7 @@ export async function validateSessionUser(sessionUserId: string | undefined): Pr
   }
   
   const user = await prisma.user.findUnique({
-    where: { id: sessionUserId },
-    select: { id: true },
+    where: { id: sessionUserId }
   })
   
   return user?.id || null
@@ -112,8 +110,7 @@ export async function validateSessionUser(sessionUserId: string | undefined): Pr
 export async function requireAdmin() {
   const session = await requireAuth()
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true },
+    where: { id: session.user.id }
   })
 
   if (user?.role !== "admin") {
@@ -128,8 +125,7 @@ export async function hasPermission(
   action: string
 ): Promise<boolean> {
   const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
+    where: { id: userId }
   })
 
   // Admins have all permissions
@@ -155,8 +151,7 @@ export async function hasProjectAccess(
   requiredRole: "viewer" | "editor" | "admin" = "viewer"
 ): Promise<boolean> {
   const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
+    where: { id: userId }
   })
 
   // Admins have access to all projects
