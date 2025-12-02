@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const sessionUserId = await validateSessionUser(session?.user?.id)
+    
+    if (!sessionUserId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -20,11 +24,11 @@ export async function GET(request: NextRequest) {
 
     // Clients can only see their own assignments
     const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: sessionUserId },
       select: { role: true },
     })
 
-    if (currentUser?.role !== "admin" && userId && userId !== session.user.id) {
+    if (currentUser?.role !== "admin" && userId && userId !== sessionUserId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -62,13 +66,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { role: true },
     })
 
@@ -132,13 +140,17 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { role: true },
     })
 

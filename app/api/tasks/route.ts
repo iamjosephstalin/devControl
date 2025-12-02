@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
     const projectId = searchParams.get("projectId")
 
-    const where: any = { userId: session.user.id }
+    const where: any = { userId }
     if (status) where.status = status
     if (projectId) where.projectId = projectId
 
@@ -32,9 +36,9 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json(tasks)
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to fetch tasks" },
+      { error: "Failed to fetch tasks", details: error.message },
       { status: 500 }
     )
   }
@@ -43,8 +47,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const body = await request.json()
@@ -58,12 +66,12 @@ export async function POST(request: NextRequest) {
         priority: priority || "medium",
         dueDate: dueDate ? new Date(dueDate) : null,
         projectId: projectId || null,
-        userId: session.user.id,
+        userId,
       },
     })
 
     return NextResponse.json(task)
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating task:", error)
     return NextResponse.json(
       { error: "Failed to create task", details: error.message },

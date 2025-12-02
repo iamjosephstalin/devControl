@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 
 export async function PUT(
@@ -9,8 +9,12 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const body = await request.json()
@@ -19,7 +23,7 @@ export async function PUT(
     const task = await prisma.task.updateMany({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId,
       },
       data: {
         ...(title && { title }),
@@ -40,9 +44,9 @@ export async function PUT(
     })
 
     return NextResponse.json(updated)
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to update task" },
+      { error: "Failed to update task", details: error.message },
       { status: 500 }
     )
   }
@@ -54,21 +58,25 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     await prisma.task.deleteMany({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId,
       },
     })
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to delete task" },
+      { error: "Failed to delete task", details: error.message },
       { status: 500 }
     )
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 
 export async function GET(
@@ -9,14 +9,18 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const project = await prisma.project.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId,
       },
       include: {
         tasks: {
@@ -33,9 +37,9 @@ export async function GET(
     }
 
     return NextResponse.json(project)
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to fetch project" },
+      { error: "Failed to fetch project", details: error.message },
       { status: 500 }
     )
   }
@@ -47,8 +51,12 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const body = await request.json()
@@ -57,7 +65,7 @@ export async function PUT(
     const project = await prisma.project.updateMany({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId,
       },
       data: {
         ...(title && { title }),
@@ -80,9 +88,9 @@ export async function PUT(
     })
 
     return NextResponse.json(updated)
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to update project" },
+      { error: "Failed to update project", details: error.message },
       { status: 500 }
     )
   }
@@ -94,21 +102,25 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     await prisma.project.deleteMany({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId,
       },
     })
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to delete project" },
+      { error: "Failed to delete project", details: error.message },
       { status: 500 }
     )
   }

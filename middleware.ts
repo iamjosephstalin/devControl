@@ -1,25 +1,48 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { getToken } from "next-auth/jwt"
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
-  // Allow access to login, signup, and API routes without auth
+  // Allow access to login, signup, static files, and API routes without auth
   if (
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/_next")
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon")
   ) {
     return NextResponse.next()
   }
 
-  // For all other routes, check for session token
-  const token = request.cookies.get("next-auth.session-token") || 
-                request.cookies.get("__Secure-next-auth.session-token")
+  // For API routes (except auth), check session but don't redirect
+  if (pathname.startsWith("/api")) {
+    const token = await getToken({ 
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET 
+    })
+    
+    if (!token) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+    
+    return NextResponse.next()
+  }
+
+  // For all other routes, validate session and redirect if not authenticated
+  const token = await getToken({ 
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET 
+  })
 
   if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url))
+    const loginUrl = new URL("/login", request.url)
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   return NextResponse.next()

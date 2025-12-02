@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 
@@ -10,19 +10,24 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     // Check if user is admin or viewing own profile
     const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { role: true },
     })
 
-    if (currentUser?.role !== "admin" && session.user.id !== params.id) {
+    if (currentUser?.role !== "admin" && userId !== params.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+
 
     const user = await prisma.user.findUnique({
       where: { id: params.id },
@@ -63,13 +68,17 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     // Check if user is admin
     const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { role: true },
     })
 
@@ -116,13 +125,17 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     // Check if user is admin
     const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { role: true },
     })
 
@@ -131,7 +144,7 @@ export async function DELETE(
     }
 
     // Prevent deleting own account
-    if (session.user.id === params.id) {
+    if (userId === params.id) {
       return NextResponse.json(
         { error: "Cannot delete your own account" },
         { status: 400 }

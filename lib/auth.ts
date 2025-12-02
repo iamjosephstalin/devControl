@@ -1,11 +1,11 @@
 import { getServerSession, NextAuthOptions } from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/db"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  secret: process.env.NEXTAUTH_SECRET,
+  // Using JWT strategy only - no database adapter needed
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -18,28 +18,33 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        })
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          })
 
-        if (!user || !user.password) {
+          if (!user || !user.password) {
+            return null
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          )
+
+          if (!isPasswordValid) {
+            return null
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role || "client",
+          }
+        } catch (err) {
+          console.error('Auth error:', err)
           return null
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
-
-        if (!isPasswordValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role || "client",
         }
       },
     }),
@@ -73,7 +78,35 @@ export async function requireAuth() {
   if (!session?.user?.id) {
     throw new Error("Unauthorized")
   }
+  
+  // Verify user exists in database (important after database migrations)
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true },
+  })
+  
+  if (!user) {
+    throw new Error("User not found in database. Please log out and log back in.")
+  }
+  
   return session
+}
+
+/**
+ * Validates that the user from the session exists in the database
+ * Returns the user ID if valid, null otherwise
+ */
+export async function validateSessionUser(sessionUserId: string | undefined): Promise<string | null> {
+  if (!sessionUserId) {
+    return null
+  }
+  
+  const user = await prisma.user.findUnique({
+    where: { id: sessionUserId },
+    select: { id: true },
+  })
+  
+  return user?.id || null
 }
 
 export async function requireAdmin() {
@@ -105,13 +138,11 @@ export async function hasPermission(
   }
 
   // Check specific permission
-  const permission = await prisma.permission.findUnique({
+  const permission = await prisma.permission.findFirst({
     where: {
-      userId_resource_action: {
-        userId,
-        resource,
-        action,
-      },
+      userId,
+      resource,
+      action,
     },
   })
 
@@ -134,12 +165,10 @@ export async function hasProjectAccess(
   }
 
   // Check project assignment
-  const assignment = await prisma.projectAssignment.findUnique({
+  const assignment = await prisma.projectAssignment.findFirst({
     where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
+      userId,
+      projectId,
     },
   })
 

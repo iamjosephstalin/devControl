@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { encrypt } from "@/lib/encryption"
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get("projectId")
 
-    const where: any = { userId: session.user.id }
+    const where: any = { userId }
     if (projectId) where.projectId = projectId
 
     const servers = await prisma.server.findMany({
@@ -49,8 +53,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const body = await request.json()
@@ -74,7 +82,7 @@ export async function POST(request: NextRequest) {
         provider: provider || "other",
         region: region || null,
         projectId: projectId || null,
-        userId: session.user.id,
+        userId,
       },
     })
 

@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     // Get user role
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { role: true },
     })
 
@@ -41,7 +45,7 @@ export async function GET(request: NextRequest) {
     } else {
       // Clients see only assigned projects
       const assignments = await prisma.projectAssignment.findMany({
-        where: { userId: session.user.id },
+        where: { userId },
         include: {
           project: {
             include: {
@@ -55,9 +59,9 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(projects)
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to fetch projects" },
+      { error: "Failed to fetch projects", details: error.message },
       { status: 500 }
     )
   }
@@ -66,8 +70,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const body = await request.json()
@@ -83,14 +91,14 @@ export async function POST(request: NextRequest) {
         deployment: deployment || "local",
         deploymentUrl,
         status: status || "active",
-        userId: session.user.id,
+        userId,
       },
     })
 
     return NextResponse.json(project)
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to create project" },
+      { error: "Failed to create project", details: error.message },
       { status: 500 }
     )
   }

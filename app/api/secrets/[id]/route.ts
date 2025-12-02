@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { encrypt, decrypt } from "@/lib/encryption"
 
@@ -10,14 +10,18 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const secret = await prisma.secret.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId,
       },
     })
 
@@ -47,8 +51,12 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     const body = await request.json()
@@ -65,7 +73,7 @@ export async function PUT(
     const secret = await prisma.secret.updateMany({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId,
       },
       data: updateData,
     })
@@ -95,21 +103,25 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const userId = await validateSessionUser(session?.user?.id)
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Unauthorized. Please log out and log back in." 
+      }, { status: 401 })
     }
 
     await prisma.secret.deleteMany({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId,
       },
     })
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to delete secret" },
+      { error: "Failed to delete secret", details: error.message },
       { status: 500 }
     )
   }
