@@ -4,6 +4,8 @@ import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db-helpers"
 import { decrypt } from "@/lib/encryption"
 
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)

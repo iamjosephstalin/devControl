@@ -188,87 +188,101 @@ export default function ProjectsPage() {
             {projects.map((project) => {
               const techStack = JSON.parse(project.techStack || "[]")
               return (
-                <Card key={project.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
+                <Card key={project.id} className="group transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 border-0 bg-gradient-to-br from-card to-card/95">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="break-all">{project.title}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {project.description || "No description"}
+                        <CardTitle className="text-xl font-mono break-all group-hover:text-primary transition-colors">{project.title}</CardTitle>
+                        <CardDescription className="mt-2 text-sm leading-relaxed">
+                          {project.description || "No description provided"}
                         </CardDescription>
                       </div>
                       <Badge
-                        className={
+                        className={`${
                           statusColors[project.status] || statusColors.active
-                        }
+                        } shrink-0 font-medium px-2 py-1`}
                       >
                         {project.status}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {techStack.length > 0 && (
+                  <CardContent className="space-y-5">
+                    {techStack.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-foreground">Tech Stack</h4>
                         <div className="flex flex-wrap gap-2">
-                          {techStack.map((tech: string, idx: number) => (
-                            <Badge key={idx} variant="outline">
+                          {techStack.slice(0, 6).map((tech: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="text-xs px-2 py-1 font-medium bg-primary/10 text-primary border-primary/20">
                               {tech}
                             </Badge>
                           ))}
+                          {techStack.length > 6 && (
+                            <Badge variant="secondary" className="text-xs px-2 py-1 bg-muted">
+                              +{techStack.length - 6} more
+                            </Badge>
+                          )}
                         </div>
-                      )}
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>Updated {formatDate(project.updatedAt)}</span>
-                        {project.githubRepo && (
+                      </div>
+                    )}
+                    
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Last Updated</span>
+                        <span className="font-medium">{formatDate(project.updatedAt)}</span>
+                      </div>
+                      {project.githubRepo && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Repository</span>
                           <a
                             href={project.githubRepo}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 hover:text-foreground"
+                            className="flex items-center gap-1 hover:text-primary transition-colors font-medium"
                           >
-                            GitHub <ExternalLink className="h-3 w-3" />
+                            View on GitHub <ExternalLink className="h-3 w-3" />
                           </a>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          asChild
-                        >
-                          <a href={`/projects/${project.id}`}>
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            View
-                          </a>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setEditingProject(project)}
-                        >
-                          <Edit className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => {
-                            if (
-                              confirm(
-                                "Are you sure you want to delete this project?"
-                              )
-                            ) {
-                              deleteMutation.mutate(project.id)
-                            }
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4 text-red-500 dark:text-red-400" />
-                          Delete
-                        </Button>
-                      </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="font-medium"
+                        asChild
+                      >
+                        <a href={`/projects/${project.id}`}>
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          View
+                        </a>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="font-medium"
+                        onClick={() => setEditingProject(project)}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "Are you sure you want to delete this project?"
+                            )
+                          ) {
+                            deleteMutation.mutate(project.id)
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

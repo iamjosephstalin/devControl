@@ -2,6 +2,36 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 
+// Simple page access control without database calls
+const pageAccess = {
+  admin: [
+    '/', '/projects', '/tasks', '/secrets', '/servers', '/notes', 
+    '/integrations', '/deployments', '/users', '/settings', '/infrastructure',
+    '/version-control', '/schedule', '/profile'
+  ],
+  client: [
+    '/projects', '/tasks', '/notes', '/profile', '/schedule'
+  ]
+}
+
+function canAccessPage(role: string, pathname: string): boolean {
+  const allowedPages = pageAccess[role as keyof typeof pageAccess] || []
+  
+  // Check exact match first
+  if (allowedPages.includes(pathname)) {
+    return true
+  }
+  
+  // Check if it's a dynamic route that user has access to
+  for (const allowedPage of allowedPages) {
+    if (allowedPage.includes('[') || pathname.startsWith(allowedPage.replace(/\[[^\]]*\]/g, ''))) {
+      return true
+    }
+  }
+  
+  return false
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
@@ -62,6 +92,16 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL("/login", request.url)
     loginUrl.searchParams.set("callbackUrl", pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // Check if user has access to this page based on their role
+  const userRole = (token.role as string) || 'client'
+  if (!canAccessPage(userRole as 'admin' | 'client', pathname)) {
+    console.log(`🚫 Access denied: ${userRole} trying to access ${pathname}`)
+    
+    // Redirect to appropriate dashboard based on role
+    const dashboardUrl = userRole === 'admin' ? '/' : '/projects'
+    return NextResponse.redirect(new URL(dashboardUrl, request.url))
   }
   
   return NextResponse.next()

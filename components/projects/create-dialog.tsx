@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useSession } from "next-auth/react"
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Users, X } from "lucide-react"
 
 interface CreateProjectDialogProps {
   open: boolean
@@ -30,6 +33,7 @@ export function CreateProjectDialog({
   open,
   onOpenChange,
 }: CreateProjectDialogProps) {
+  const { data: session } = useSession()
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState({
     title: "",
@@ -41,6 +45,32 @@ export function CreateProjectDialog({
     status: "active",
     tags: "",
   })
+  const [selectedClients, setSelectedClients] = useState<string[]>([])
+
+  // Fetch users (clients) for assignment - only for admins
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const res = await fetch("/api/users")
+      if (!res.ok) throw new Error("Failed to fetch users")
+      return res.json()
+    },
+    enabled: session?.user?.role === "admin" && open
+  })
+
+  const clientUsers = users.filter((user: any) => user.role === "client")
+
+  const toggleClientSelection = (clientId: string) => {
+    setSelectedClients(prev => 
+      prev.includes(clientId)
+        ? prev.filter(id => id !== clientId)
+        : [...prev, clientId]
+    )
+  }
+
+  const removeClient = (clientId: string) => {
+    setSelectedClients(prev => prev.filter(id => id !== clientId))
+  }
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -62,8 +92,25 @@ export function CreateProjectDialog({
       if (!res.ok) throw new Error("Failed to create project")
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: async (project) => {
+      // Assign selected clients to the project
+      if (selectedClients.length > 0) {
+        await Promise.all(
+          selectedClients.map(async (clientId) => {
+            await fetch("/api/project-assignments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                projectId: project.id,
+                userId: clientId
+              }),
+            })
+          })
+        )
+      }
+
       queryClient.invalidateQueries({ queryKey: ["projects"] })
+      queryClient.invalidateQueries({ queryKey: ["project-assignments"] })
       setFormData({
         title: "",
         description: "",
@@ -74,6 +121,7 @@ export function CreateProjectDialog({
         status: "active",
         tags: "",
       })
+      setSelectedClients([])
       onOpenChange(false)
     },
   })
@@ -110,6 +158,61 @@ export function CreateProjectDialog({
               placeholder="A brief description of your project"
             />
           </div>
+
+          {/* Client Assignment - Only for Admins */}
+          {session?.user?.role === "admin" && (
+            <div>
+              <Label className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Assign Clients
+              </Label>
+              <div className="space-y-3">
+                <Select onValueChange={toggleClientSelection}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select clients to assign to this project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientUsers.map((client: any) => (
+                      <SelectItem 
+                        key={client.id} 
+                        value={client.id}
+                        disabled={selectedClients.includes(client.id)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{client.name || client.email}</span>
+                          <span className="text-xs text-muted-foreground">({client.email})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {selectedClients.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Selected Clients ({selectedClients.length}):</div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedClients.map((clientId) => {
+                        const client = clientUsers.find((u: any) => u.id === clientId)
+                        return (
+                          <Badge key={clientId} variant="secondary" className="flex items-center gap-1">
+                            {client?.name || client?.email}
+                            <button
+                              type="button"
+                              onClick={() => removeClient(clientId)}
+                              className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="techStack">Tech Stack</Label>

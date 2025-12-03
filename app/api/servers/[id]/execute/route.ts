@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db"
 import { executeSSHCommand } from "@/lib/ssh"
 import { decrypt } from "@/lib/encryption"
 
+
+export const runtime = 'nodejs'
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }

@@ -23,7 +23,6 @@ import { fetchIntegrations, getIntegrationToken } from "@/lib/integrations"
 import { IntegrationCard } from "@/components/integrations/integration-card"
 import { CreateVersionControlDialog } from "@/components/integrations/create-version-control-dialog"
 import { RepositoryDetailsModal } from "@/components/version-control/repository-details-modal"
-import { IntegrationDiagnostics } from "@/components/debug/integration-diagnostics"
 
 export default function VersionControlPage() {
   const [activeTab, setActiveTab] = useState<'repositories' | 'integrations'>('repositories')
@@ -192,7 +191,6 @@ export default function VersionControlPage() {
               <Settings className="mr-2 h-4 w-4" />
               {activeTab === "repositories" ? "Manage Integrations" : "View Repositories"}
             </Button>
-            <IntegrationDiagnostics />
           </div>
         </div>
       </div>
@@ -239,83 +237,99 @@ export default function VersionControlPage() {
                 const repoData = formatRepoData(repo)
                 const repoId = repo.id || repo.uuid || index
                 return (
-                  <Card key={`${repo.provider}-${repoId}`} className="h-full">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-2">
+                  <Card key={`${repo.provider}-${repoId}`} className="group h-full transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 border-0 bg-gradient-to-br from-card to-card/95">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-lg flex items-center gap-2 truncate">
+                          <CardTitle className="text-xl flex items-center gap-3 truncate group-hover:text-primary transition-colors font-mono">
                             {getRepoIcon(repo.provider)}
                             <span className="truncate">{repoData.name}</span>
                           </CardTitle>
-                          <CardDescription className="mt-1 truncate">
+                          <CardDescription className="mt-2 text-sm leading-relaxed">
                             {repoData.fullName}
                           </CardDescription>
                         </div>
-                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                          <Badge variant={repoData.isPrivate ? "secondary" : "default"} className="text-xs">
-                            {repoData.isPrivate ? "Private" : "Public"}
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                          <Badge variant={repoData.isPrivate ? "secondary" : "default"} className="text-xs px-2 py-1 font-medium">
+                            {repoData.isPrivate ? "🔒 Private" : "🌐 Public"}
                           </Badge>
                           {repoData.isArchived && (
-                            <Badge variant="outline" className="text-xs">Archived</Badge>
+                            <Badge variant="outline" className="text-xs px-2 py-1">📦 Archived</Badge>
                           )}
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-3">
-                        {repoData.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
+                    <CardContent className="space-y-5">
+                      {repoData.description && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-semibold text-foreground">Description</h4>
+                          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                             {repoData.description}
                           </p>
-                        )}
-                        
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                        </div>
+                      )}
+                      
+                      <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                        <h4 className="text-sm font-semibold text-foreground">Repository Stats</h4>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
                           {repoData.language && (
-                            <span className="truncate">{repoData.language}</span>
+                            <div className="space-y-1">
+                              <span className="text-muted-foreground">Language</span>
+                              <p className="font-medium">{repoData.language}</p>
+                            </div>
                           )}
-                          <div className="flex items-center gap-1">
-                            <Star className="h-3 w-3" />
-                            {repoData.stars}
+                          <div className="space-y-1">
+                            <span className="text-muted-foreground">Stars</span>
+                            <div className="flex items-center gap-1 font-medium">
+                              <Star className="h-3 w-3" />
+                              {repoData.stars}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <GitFork className="h-3 w-3" />
-                            {repoData.forks}
+                          <div className="space-y-1">
+                            <span className="text-muted-foreground">Forks</span>
+                            <div className="flex items-center gap-1 font-medium">
+                              <GitFork className="h-3 w-3" />
+                              {repoData.forks}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-muted-foreground">Updated</span>
+                            <p className="font-medium">{formatDate(new Date(repoData.updatedAt))}</p>
                           </div>
                         </div>
-                        
-                        <div className="text-xs text-muted-foreground">
-                          Updated {formatDate(new Date(repoData.updatedAt))}
+                        <div className="pt-2 border-t">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Source</span>
+                            <span className="font-medium">{repo.integration}</span>
+                          </div>
                         </div>
-                        
-                        <div className="text-xs text-muted-foreground truncate">
-                          via {repo.integration}
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          <RepositoryDetailsModal 
-                            repository={repo} 
-                            integration={gitIntegrations.find(i => i.name === repo.integration)}
-                          >
-                            <Button variant="outline" size="sm" className="flex-1">
-                              View Details
-                            </Button>
-                          </RepositoryDetailsModal>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            asChild
-                          >
-                            <a
-                              href={repoData.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <RepositoryDetailsModal 
+                          repository={repo} 
+                          integration={gitIntegrations.find(i => i.name === repo.integration)}
+                        >
+                          <Button variant="outline" size="sm" className="w-full font-medium">
+                            View Details
                           </Button>
-                        </div>
+                        </RepositoryDetailsModal>
+                        
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="font-medium"
+                          asChild
+                        >
+                          <a
+                            href={repoData.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Open
+                          </a>
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

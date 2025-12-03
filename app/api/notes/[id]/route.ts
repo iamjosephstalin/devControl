@@ -4,6 +4,8 @@ import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db-helpers"
 import { encrypt, decrypt } from "@/lib/encryption"
 
+export const runtime = 'nodejs'
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

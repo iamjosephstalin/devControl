@@ -6,6 +6,8 @@ import { decrypt } from "@/lib/encryption"
 
 // This endpoint provides server connection info for WebSocket terminal
 // The actual terminal will use WebSocket for real-time communication
+
+export const runtime = 'nodejs'
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

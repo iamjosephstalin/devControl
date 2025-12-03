@@ -161,39 +161,87 @@ export default function SecretsPage() {
   })
 
   const toggleReveal = async (id: string) => {
+    console.log("🔍 toggleReveal called for ID:", id)
+    console.log("Current revealed secrets:", Array.from(revealedSecrets.keys()))
+    
     if (revealedSecrets.has(id)) {
+      console.log("📖 Hiding secret:", id)
       setRevealedSecrets((prev) => {
         const next = new Map(prev)
         next.delete(id)
+        console.log("✅ Secret hidden, new map size:", next.size)
         return next
       })
     } else {
+      console.log("🔐 Revealing secret:", id)
       try {
+        console.log("📡 Fetching secret from API:", `/api/secrets/${id}`)
         const res = await fetch(`/api/secrets/${id}`)
-        if (!res.ok) throw new Error("Failed to fetch secret value")
+        console.log("📡 API Response status:", res.status, res.statusText)
+        
+        if (!res.ok) {
+          const errorText = await res.text()
+          console.error("❌ API Error response:", errorText)
+          throw new Error(`Failed to fetch secret value: ${res.status} - ${errorText}`)
+        }
+        
         const data = await res.json()
-        setRevealedSecrets((prev) => new Map(prev).set(id, data.value))
+        console.log("📦 Received data:", { ...data, value: data.value ? "[REDACTED]" : "null" })
+        
+        setRevealedSecrets((prev) => {
+          const next = new Map(prev).set(id, data.value)
+          console.log("✅ Secret revealed, new map size:", next.size)
+          return next
+        })
       } catch (error) {
-        console.error("Failed to reveal secret", error)
+        console.error("❌ Failed to reveal secret", error)
+        alert(`Failed to reveal secret: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
   }
 
   const copyToClipboard = async (id: string) => {
+    console.log("📋 copyToClipboard called for ID:", id)
+    
     try {
       let value = revealedSecrets.get(id)
+      console.log("📋 Value from revealed secrets:", value ? "[REDACTED]" : "null")
+      
       if (!value) {
+        console.log("📡 Value not in memory, fetching from API...")
         const res = await fetch(`/api/secrets/${id}`)
+        console.log("📡 Copy API Response status:", res.status, res.statusText)
+        
+        if (!res.ok) {
+          const errorText = await res.text()
+          console.error("❌ Copy API Error response:", errorText)
+          throw new Error(`Failed to fetch secret for copy: ${res.status} - ${errorText}`)
+        }
+        
         const data = await res.json()
+        console.log("📦 Copy received data:", { ...data, value: data.value ? "[REDACTED]" : "null" })
         value = data.value
       }
+      
       if (value) {
+        console.log("📋 Attempting to copy to clipboard...")
         await navigator.clipboard.writeText(value)
+        console.log("✅ Successfully copied to clipboard")
+        
         setCopiedId(id)
-        setTimeout(() => setCopiedId(null), 2000)
+        console.log("✅ Set copied state for:", id)
+        
+        setTimeout(() => {
+          setCopiedId(null)
+          console.log("🔄 Cleared copied state")
+        }, 2000)
+      } else {
+        console.warn("⚠️ No value to copy")
+        alert("No value found to copy")
       }
     } catch (error) {
-      console.error("Failed to copy secret", error)
+      console.error("❌ Failed to copy secret", error)
+      alert(`Failed to copy secret: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -297,119 +345,137 @@ export default function SecretsPage() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredSecrets.map((secret) => {
+            {paginatedSecrets.map((secret) => {
               const revealedValue = revealedSecrets.get(secret.id)
               const isRevealed = !!revealedValue
 
               return (
-                <Card key={secret.id} className="flex flex-col">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
+                <Card key={secret.id} className="group flex flex-col transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 border-0 bg-gradient-to-br from-card to-card/95">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="flex items-center gap-2 break-all">
-                          {secret.type === 'markdown' && <FileText className="h-4 w-4 shrink-0" />}
+                        <CardTitle className="flex items-center gap-3 break-all text-xl font-mono group-hover:text-primary transition-colors">
+                          {secret.type === 'markdown' && <FileText className="h-5 w-5 shrink-0" />}
                           {secret.name}
                         </CardTitle>
-                        <CardDescription className="mt-1">
-                          {secret.description || "No description"}
+                        <CardDescription className="mt-2 text-sm leading-relaxed">
+                          {secret.description || "No description provided"}
                         </CardDescription>
                       </div>
                       <Badge
-                        className={
+                        className={`${
                           typeColors[secret.type] || typeColors.other
-                        }
+                        } shrink-0 font-medium px-2 py-1`}
                       >
                         {secret.type}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="flex-1">
-                    <div className="space-y-3 h-full flex flex-col">
-                      <div>
-                        {secret.project ? (
-                          <Badge variant="outline" className="mb-2">{secret.project.title}</Badge>
+                  <CardContent className="flex-1 space-y-4">
+                    <div className="flex items-center gap-2">
+                      {secret.project ? (
+                        <Badge variant="outline" className="text-xs px-2 py-1 font-medium">
+                          📁 {secret.project.title}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs px-2 py-1 font-medium bg-primary/10 text-primary">
+                          🌐 General
+                        </Badge>
+                      )}
+                    </div>
+
+                    {isRevealed && (
+                      <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+                        <h4 className="text-sm font-semibold text-foreground">Secret Content</h4>
+                        {secret.type === 'markdown' ? (
+                          <div className="overflow-auto max-h-[300px] prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                code({ node, inline, className, children, ...props }: any) {
+                                  const match = /language-(\w+)/.exec(className || '')
+                                  return !inline && match ? (
+                                    <SyntaxHighlighter
+                                      {...props}
+                                      style={vscDarkPlus}
+                                      language={match[1]}
+                                      PreTag="div"
+                                    >
+                                      {String(children).replace(/\n$/, '')}
+                                    </SyntaxHighlighter>
+                                  ) : (
+                                    <code {...props} className={className}>
+                                      {children}
+                                    </code>
+                                  )
+                                }
+                              }}
+                            >
+                              {revealedValue || ''}
+                            </ReactMarkdown>
+                          </div>
                         ) : (
-                          <Badge variant="secondary" className="mb-2">General</Badge>
+                          <div className="rounded bg-card border p-3 font-mono text-sm break-all max-h-[200px] overflow-auto">
+                            {revealedValue || 'No content'}
+                          </div>
                         )}
                       </div>
+                    )}
 
-                      {isRevealed && secret.type === 'markdown' && (
-                        <div className="mt-2 p-4 bg-muted rounded-md overflow-auto max-h-[300px] prose prose-sm dark:prose-invert max-w-none">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              code({ node, inline, className, children, ...props }: any) {
-                                const match = /language-(\w+)/.exec(className || '')
-                                return !inline && match ? (
-                                  <SyntaxHighlighter
-                                    {...props}
-                                    style={vscDarkPlus}
-                                    language={match[1]}
-                                    PreTag="div"
-                                  >
-                                    {String(children).replace(/\n$/, '')}
-                                  </SyntaxHighlighter>
-                                ) : (
-                                  <code {...props} className={className}>
-                                    {children}
-                                  </code>
-                                )
-                              }
-                            }}
-                          >
-                            {revealedValue || ''}
-                          </ReactMarkdown>
-                        </div>
-                      )}
+                    <div className="flex-1" />
 
-                      <div className="flex-1" />
-
-                      <div className="flex items-center justify-between text-sm text-muted-foreground mt-4">
-                        <span>Created {formatDate(secret.createdAt)}</span>
+                    <div className="rounded-lg border bg-muted/30 p-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Created</span>
+                        <span className="font-medium">{formatDate(secret.createdAt)}</span>
                       </div>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleReveal(secret.id)}
-                        >
-                          {isRevealed ? (
-                            <>
-                              <EyeOff className="mr-2 h-4 w-4" />
-                              Hide
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="mr-2 h-4 w-4" />
-                              Reveal
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyToClipboard(secret.id)}
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          {copiedId === secret.id ? "Copied!" : "Copy"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (
-                              confirm(
-                                "Are you sure you want to delete this secret?"
-                              )
-                            ) {
-                              deleteMutation.mutate(secret.id)
-                            }
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4 text-red-500 dark:text-red-400" />
-                          Delete
-                        </Button>
-                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="font-medium"
+                        onClick={() => toggleReveal(secret.id)}
+                      >
+                        {isRevealed ? (
+                          <>
+                            <EyeOff className="mr-2 h-4 w-4" />
+                            Hide
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Reveal
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="font-medium"
+                        onClick={() => copyToClipboard(secret.id)}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        {copiedId === secret.id ? "Copied!" : "Copy"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "Are you sure you want to delete this secret?"
+                            )
+                          ) {
+                            deleteMutation.mutate(secret.id)
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

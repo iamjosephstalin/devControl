@@ -48,17 +48,32 @@ export function DeploymentDetailsModal({ deployment, integration, children }: De
   const latestDeployment = deployments[0] || deployment
 
   // Fetch deployment logs
-  const { data: logs = [], isLoading: logsLoading } = useQuery({
+  const { data: rawLogs = [], isLoading: logsLoading, error: logsError } = useQuery({
     queryKey: ['deployment-logs', latestDeployment.uid || latestDeployment.name, integration.id],
     queryFn: async () => {
       if (deployment.provider !== 'vercel' || !latestDeployment.uid) return []
       
+      console.log('🔍 Fetching logs for deployment:', latestDeployment.uid)
+      
       const token = await getIntegrationToken(integration.id)
       const teamId = integration.config?.teamId
-      return fetchVercelDeploymentLogs(token, latestDeployment.uid, teamId)
+      
+      const logs = await fetchVercelDeploymentLogs(token, latestDeployment.uid, teamId)
+      console.log('📦 Raw logs received:', logs.length, 'events')
+      
+      return logs
     },
     enabled: open && deployment.provider === 'vercel' && !!latestDeployment.uid
   })
+  
+  // Process logs into a readable format
+  const logs = rawLogs.filter((log: any) => log.text && log.text.trim()).map((log: any) => ({
+    timestamp: log.timestamp,
+    text: log.text,
+    source: log.source || 'system'
+  }))
+  
+  console.log('📋 Processed logs:', logs.length, 'entries')
 
   // Fetch build details
   const { data: buildInfo, isLoading: buildLoading } = useQuery({
@@ -240,25 +255,57 @@ export function DeploymentDetailsModal({ deployment, integration, children }: De
 
             <TabsContent value="logs" className="space-y-4">
               {logsLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading logs...</div>
-              ) : logs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No logs available</div>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Terminal className="h-6 w-6 mx-auto mb-2 animate-pulse" />
+                  Loading deployment logs...
+                </div>
+              ) : logsError ? (
+                <div className="text-center py-8">
+                  <div className="text-destructive mb-2">❌ Failed to load logs</div>
+                  <div className="text-sm text-muted-foreground">
+                    {logsError instanceof Error ? logsError.message : 'Unknown error occurred'}
+                  </div>
+                </div>
+              ) : !logs || logs.length === 0 ? (
+                <div className="text-center py-8">
+                  <Terminal className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <div className="text-muted-foreground mb-2">No logs available</div>
+                  <div className="text-sm text-muted-foreground">
+                    {deployment.provider !== 'vercel' 
+                      ? 'Logs are only available for Vercel deployments'
+                      : rawLogs.length === 0
+                        ? 'This deployment did not generate any log events'
+                        : 'All log events were filtered out (no text content)'
+                    }
+                  </div>
+                  {rawLogs.length > 0 && (
+                    <div className="text-xs text-muted-foreground mt-2">
+                      Raw events received: {rawLogs.length}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Terminal className="h-5 w-5" />
-                      Deployment Logs
+                      Deployment Logs ({logs.length} entries)
                     </CardTitle>
+                    <CardDescription>
+                      Build and deployment events from Vercel
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-black text-green-400 p-4 rounded font-mono text-sm max-h-96 overflow-y-auto">
+                    <div className="bg-black text-green-400 p-4 rounded font-mono text-sm max-h-96 overflow-y-auto space-y-1">
                       {logs.map((log: any, index: number) => (
-                        <div key={index} className="flex gap-2">
-                          <span className="text-gray-500 text-xs">
+                        <div key={index} className="flex gap-2 items-start">
+                          <span className="text-gray-500 text-xs shrink-0 mt-0.5">
                             {new Date(log.timestamp).toLocaleTimeString()}
                           </span>
-                          <span>{log.text}</span>
+                          <span className="text-blue-400 text-xs shrink-0 mt-0.5">
+                            [{log.source}]
+                          </span>
+                          <span className="flex-1 break-all leading-tight">{log.text}</span>
                         </div>
                       ))}
                     </div>

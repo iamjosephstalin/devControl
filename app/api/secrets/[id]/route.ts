@@ -4,20 +4,40 @@ import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { encrypt, decrypt } from "@/lib/encryption"
 
+export const runtime = 'nodejs'
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Ensure logs appear in Vercel by using console methods and process.stdout
+  const logToVercel = (message: string, data?: any) => {
+    const timestamp = new Date().toISOString()
+    const logMessage = `[${timestamp}] ${message}`
+    console.log(logMessage, data || '')
+    // Force flush to ensure logs appear in Vercel
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write('')
+    }
+  }
+  
   try {
+    logToVercel(`🔐 GET /api/secrets/${params.id} - Starting request`)
+    
     const session = await getServerSession(authOptions)
     const userId = await validateSessionUser(session?.user?.id)
     
+    logToVercel(`🔒 Authentication check`, { userId: !!userId, sessionExists: !!session })
+    
     if (!userId) {
+      logToVercel(`❌ Unauthorized access attempt to secret ${params.id}`)
       return NextResponse.json({ 
         error: "Unauthorized. Please log out and log back in." 
       }, { status: 401 })
     }
 
+    logToVercel(`🔍 Looking up secret ${params.id} for user ${userId}`)
+    
     const secret = await prisma.secret.findFirst({
       where: {
         id: params.id,
@@ -26,20 +46,33 @@ export async function GET(
     })
 
     if (!secret) {
+      logToVercel(`❌ Secret not found: ${params.id} for user ${userId}`)
       return NextResponse.json({ error: "Secret not found" }, { status: 404 })
     }
 
+    logToVercel(`🔓 Secret found, decrypting value for ${params.id}`)
+    
     // Decrypt and return the value
     const decryptedValue = decrypt(secret.encryptedValue)
+    
+    logToVercel(`✅ Successfully decrypted and returning secret ${params.id}`)
 
     return NextResponse.json({
       ...secret,
       encryptedValue: undefined,
       value: decryptedValue,
     })
-  } catch (error) {
+  } catch (error: any) {
+    const errorMessage = `❌ Failed to fetch secret ${params.id}: ${error.message}`
+    console.error(errorMessage)
+    console.error('Error stack:', error.stack)
+    // Force flush for errors
+    if (typeof process !== 'undefined' && process.stderr) {
+      process.stderr.write('')
+    }
+    
     return NextResponse.json(
-      { error: "Failed to fetch secret" },
+      { error: "Failed to fetch secret", details: error.message },
       { status: 500 }
     )
   }

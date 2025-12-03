@@ -69,20 +69,20 @@ export function IntegrationCard({ integration }: IntegrationCardProps) {
   }
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
+    <Card className="group h-full transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 border-0 bg-gradient-to-br from-card to-card/95">
+      <CardHeader className="pb-4">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <CardTitle className="text-lg flex items-center gap-2 truncate">
-              <span className="text-xl flex-shrink-0">{config.icon}</span>
-              <span className="truncate">{integration.name}</span>
+            <CardTitle className="text-xl flex items-center gap-3 truncate group-hover:text-primary transition-colors">
+              <span className="text-2xl flex-shrink-0">{config.icon}</span>
+              <span className="truncate font-mono">{integration.name}</span>
             </CardTitle>
-            <CardDescription className="mt-1 truncate">
+            <CardDescription className="mt-2 text-sm leading-relaxed">
               {config.name} Integration
             </CardDescription>
           </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <Badge variant={getStatusColor(integration.status)} className="text-xs">
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <Badge variant={getStatusColor(integration.status)} className="text-xs px-2 py-1 font-medium">
               {integration.status}
             </Badge>
             <Dialog open={isEditing} onOpenChange={setIsEditing}>
@@ -122,59 +122,62 @@ export function IntegrationCard({ integration }: IntegrationCardProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-3">
-          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+      <CardContent className="pt-0 space-y-5">
+        <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-foreground">Connection Details</h4>
+          <div className="space-y-2 text-sm">
             {integration.lastSync && (
-              <div>
-                Last synced: {formatDate(new Date(integration.lastSync))}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Last Synced</span>
+                <span className="font-medium">{formatDate(new Date(integration.lastSync))}</span>
               </div>
             )}
-            <div>
-              Connected: {formatDate(new Date(integration.createdAt))}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Connected</span>
+              <span className="font-medium">{formatDate(new Date(integration.createdAt))}</span>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleTestConnection}
-                className="flex-1 text-xs"
-              >
-                <RefreshCw className="mr-1 h-3 w-3" />
-                Test
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="flex-1 text-xs"
-              >
-                <a
-                  href={config.tokenUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="mr-1 h-3 w-3" />
-                  Manage
-                </a>
-              </Button>
-            </div>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestConnection}
+              className="font-medium transition-colors"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Test Connection
+            </Button>
             
             <Button
-              variant="destructive"
+              variant="outline"
               size="sm"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="w-full text-xs"
+              asChild
+              className="font-medium transition-colors"
             >
-              <Trash2 className="mr-1 h-3 w-3" />
-              {isDeleting ? "Disconnecting..." : "Disconnect"}
+              <a
+                href={config.tokenUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Manage
+              </a>
             </Button>
           </div>
+          
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="w-full font-medium"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {isDeleting ? "Disconnecting..." : "Disconnect Integration"}
+          </Button>
         </div>
       </CardContent>
     </Card>

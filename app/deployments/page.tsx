@@ -25,7 +25,6 @@ import { fetchIntegrations, getIntegrationToken } from "@/lib/integrations"
 import { IntegrationCard } from "@/components/integrations/integration-card"
 import { CreateDeploymentDialog } from "@/components/integrations/create-deployment-dialog"
 import { DeploymentDetailsModal } from "@/components/deployments/deployment-details-modal"
-import { IntegrationDiagnostics } from "@/components/debug/integration-diagnostics"
 import { fetchVercelProjects } from "@/lib/vercel"
 import { fetchNetlifySites } from "@/lib/netlify"
 import { fetchRailwayProjects } from "@/lib/railway"
@@ -235,7 +234,6 @@ export default function DeploymentsPage() {
               <Settings className="mr-2 h-4 w-4" />
               {activeTab === "deployments" ? "Manage Integrations" : "View Deployments"}
             </Button>
-            <IntegrationDiagnostics />
           </div>
         </div>
       </div>
@@ -296,15 +294,15 @@ export default function DeploymentsPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
               {filteredDeployments.map((deployment: any) => (
-                <Card key={`${deployment.provider}-${deployment.id}`} className="h-full">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
+                <Card key={`${deployment.provider}-${deployment.id}`} className="group h-full transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 border-0 bg-gradient-to-br from-card to-card/95">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-lg flex items-center gap-2 truncate">
+                        <CardTitle className="text-xl flex items-center gap-3 truncate group-hover:text-primary transition-colors font-mono">
                           {getProviderIcon(deployment.provider)}
                           <span className="truncate">{deployment.name}</span>
                         </CardTitle>
-                        <CardDescription className="mt-1 truncate">
+                        <CardDescription className="mt-2 text-sm leading-relaxed">
                           {deployment.framework || deployment.type || "Deployment"}
                         </CardDescription>
                       </div>
@@ -313,42 +311,65 @@ export default function DeploymentsPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-3">
-                      <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                        <div>
-                          Created {formatDate(new Date(deployment.createdAt || deployment.created_at || Date.now()))}
+                  <CardContent className="space-y-5">
+                    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                      <h4 className="text-sm font-semibold text-foreground">Deployment Info</h4>
+                      <div className="grid grid-cols-1 gap-3 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Created</span>
+                          <span className="font-medium">{formatDate(new Date(deployment.createdAt || deployment.created_at || Date.now()))}</span>
                         </div>
-                        <div className="truncate">
-                          via {deployment.integration}
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Provider</span>
+                          <span className="font-medium capitalize">{deployment.provider}</span>
+                        </div>
+                        {deployment.url && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">URL</span>
+                            <a
+                              href={deployment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-primary hover:text-primary/80 transition-colors truncate max-w-[120px]"
+                            >
+                              {deployment.url.replace(/^https?:\/\//, '')}
+                            </a>
+                          </div>
+                        )}
+                        <div className="pt-2 border-t">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Integration</span>
+                            <span className="font-medium">{deployment.integration}</span>
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="flex gap-2">
-                        <DeploymentDetailsModal 
-                          deployment={deployment} 
-                          integration={deploymentIntegrations.find(i => i.name === deployment.integration)}
-                        >
-                          <Button variant="outline" size="sm" className="flex-1">
-                            View Details
-                          </Button>
-                        </DeploymentDetailsModal>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          asChild
-                        >
-                          <a
-                            href={getDeploymentUrl(deployment)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <DeploymentDetailsModal 
+                        deployment={deployment} 
+                        integration={deploymentIntegrations.find(i => i.name === deployment.integration)}
+                      >
+                        <Button variant="outline" size="sm" className="w-full font-medium">
+                          View Details
                         </Button>
-                      </div>
+                      </DeploymentDetailsModal>
+                      
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="font-medium"
+                        asChild
+                      >
+                        <a
+                          href={getDeploymentUrl(deployment)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Open
+                        </a>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

@@ -568,16 +568,17 @@ function PermissionsManagement() {
     enabled: session?.user?.role === "admin",
   })
 
-  const [selectedUserId, setSelectedUserId] = useState<string>("")
+  const [selectedRole, setSelectedRole] = useState<string>("admin")
 
-  const resources = ["projects", "tasks", "secrets", "servers", "notes", "settings"]
+  const resources = ["projects", "tasks", "secrets", "servers", "notes", "integrations", "deployments", "users"]
   const actions = ["read", "write", "delete", "manage"]
+  const roles = ["admin", "client"]
 
   const queryClient = useQueryClient()
 
-  const handleTogglePermission = async (userId: string, resource: string, action: string) => {
-    const existing = permissions?.find(
-      (p: any) => p.userId === userId && p.resource === resource && p.action === action
+  const handleTogglePermission = async (role: string, resource: string, action: string) => {
+    const existing = permissions?.[role]?.find(
+      (p: any) => p.role === role && p.resource === resource && p.action === action
     )
 
     try {
@@ -587,7 +588,7 @@ function PermissionsManagement() {
         await fetch("/api/permissions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, resource, action }),
+          body: JSON.stringify({ role, resource, action }),
         })
       }
       // Refetch permissions
@@ -610,66 +611,92 @@ function PermissionsManagement() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Permissions Management</CardTitle>
+        <CardTitle>Role-Based Permissions</CardTitle>
         <CardDescription>
-          Configure permissions for users
+          Configure permissions for Admin and Client roles. Users inherit permissions based on their role.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <div>
-          <Label>Select User</Label>
-          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a user" />
-            </SelectTrigger>
-            <SelectContent>
-              {users?.filter((u: any) => u.role === "client").map((user: any) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.name || user.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className="text-base font-semibold">Select Role to Configure</Label>
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            {roles.map((role) => (
+              <Card 
+                key={role} 
+                className={`cursor-pointer transition-all border-2 ${
+                  selectedRole === role 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+                onClick={() => setSelectedRole(role)}
+              >
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-2">
+                    {role === 'admin' ? '👑' : '👤'}
+                  </div>
+                  <div className="font-semibold capitalize">{role}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {role === 'admin' ? 'Full system access' : 'Limited access'}
+                  </div>
+                  {permissions?.[role] && (
+                    <div className="text-xs text-primary mt-1">
+                      {permissions[role].length} permissions set
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
 
-        {selectedUserId && (
-          <div className="space-y-4">
-            <h3 className="font-medium">Permissions</h3>
-            <div className="space-y-2">
-              {resources.map((resource) => (
-                <div key={resource} className="border rounded-lg p-4">
-                  <h4 className="font-medium mb-2 capitalize">{resource}</h4>
-                  <div className="grid grid-cols-4 gap-2">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold capitalize">{selectedRole} Permissions</h3>
+            <Badge variant="outline">
+              {permissions?.[selectedRole]?.length || 0} active permissions
+            </Badge>
+          </div>
+          
+          <div className="grid gap-4">
+            {resources.map((resource) => (
+              <Card key={resource} className="border border-border">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base capitalize flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary"></span>
+                    {resource}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {actions.map((action) => {
-                      const hasPermission = permissions?.some(
-                        (p: any) =>
-                          p.userId === selectedUserId &&
-                          p.resource === resource &&
-                          p.action === action
+                      const hasPermission = permissions?.[selectedRole]?.some(
+                        (p: any) => p.resource === resource && p.action === action
                       )
                       return (
                         <label
                           key={action}
-                          className="flex items-center space-x-2 cursor-pointer"
+                          className="flex items-center space-x-3 cursor-pointer group p-2 rounded-md hover:bg-muted/50 transition-colors"
                         >
                           <input
                             type="checkbox"
                             checked={hasPermission}
                             onChange={() =>
-                              handleTogglePermission(selectedUserId, resource, action)
+                              handleTogglePermission(selectedRole, resource, action)
                             }
-                            className="h-4 w-4"
+                            className="h-4 w-4 rounded border-2 text-primary focus:ring-primary"
                           />
-                          <span className="text-sm capitalize">{action}</span>
+                          <span className="text-sm font-medium capitalize group-hover:text-primary transition-colors">
+                            {action}
+                          </span>
                         </label>
                       )
                     })}
                   </div>
-                </div>
-              ))}
-            </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   )

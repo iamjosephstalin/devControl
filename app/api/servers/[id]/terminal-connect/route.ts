@@ -7,6 +7,8 @@ import { Client } from "ssh2"
 
 // This endpoint provides connection credentials for terminal
 // The actual terminal connection will be handled client-side via WebSocket or direct connection
+
+export const runtime = 'nodejs'
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }

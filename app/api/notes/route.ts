@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth"
 import { authOptions, validateSessionUser } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { encrypt, decrypt } from "@/lib/encryption"
+import { requirePermissionForUser, getDataFilter } from "@/lib/rbac"
+
+export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,14 +18,32 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
 
+    // Check permission using RBAC system
+    const user = await requirePermissionForUser(userId, 'notes', 'read')
+
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get("projectId")
 
-    const where: any = { userId }
-    if (projectId) where.projectId = projectId
+    // Apply data filter based on user role
+    let dataFilter = getDataFilter('notes', user.id, user.role)
+
+    // Add project filter if specified
+    if (projectId) {
+      dataFilter = {
+        AND: [
+          dataFilter,
+          { projectId }
+        ]
+      } as any
+    }
 
     const notes = await prisma.note.findMany({
-      where,
+      where: dataFilter,
+      include: {
+        project: {
+          select: { id: true, title: true }
+        }
+      },
       orderBy: { updatedAt: "desc" },
     })
 
@@ -47,8 +68,15 @@ export async function GET(request: NextRequest) {
       return note
     })
 
+    console.log(`📝 Notes API: ${user.role} ${user.email} accessed ${processedNotes.length} notes`)
+
     return NextResponse.json(processedNotes)
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message.includes('Unauthorized') || error.message.includes('Forbidden')) {
+      return NextResponse.json({ error: error.message }, { status: 401 })
+    }
+    
+    console.error('Notes API error:', error)
     return NextResponse.json(
       { error: "Failed to fetch notes" },
       { status: 500 }
@@ -67,6 +95,9 @@ export async function POST(request: NextRequest) {
       }, { status: 401 })
     }
 
+    // Check permission using RBAC system
+    const user = await requirePermissionForUser(userId, 'notes', 'write')
+
     const body = await request.json()
     const { title, content, tags, projectId, isEncrypted } = body
 
@@ -77,10 +108,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ProjectId is optional - notes can be general or project-specific
+
+    // Check if user has access to the specified project (if projectId provided)
+    if (projectId && projectId !== "none" && user.role !== 'admin') {
+      const projectFilter = getDataFilter('projects', user.id, user.role)
+      const hasProjectAccess = await prisma.project.findFirst({
+        where: { 
+          AND: [
+            { id: projectId },
+            projectFilter
+          ]
+        }
+      })
+      
+      if (!hasProjectAccess) {
+        return NextResponse.json(
+          { error: "Access denied: You don't have permission to create notes in this project" },
+          { status: 403 }
+        )
+      }
+    }
+
     let noteData: any = {
       tags: tags && tags.length > 0 ? JSON.stringify(tags) : null,
-      projectId: projectId === "none" ? null : projectId,
-      userId,
+      projectId: projectId === "none" ? null : projectId, // Can be null for general notes
+      userId: user.id,
       isEncrypted: isEncrypted || false,
     }
 
@@ -98,8 +151,14 @@ export async function POST(request: NextRequest) {
       data: noteData,
     })
 
+    console.log(`📝 Note created: ${user.role} ${user.email} created "${title}" in project ${projectId}`)
+
     return NextResponse.json(note)
   } catch (error: any) {
+    if (error.message.includes('Unauthorized') || error.message.includes('Forbidden')) {
+      return NextResponse.json({ error: error.message }, { status: 401 })
+    }
+    
     console.error("Error creating note:", error)
     return NextResponse.json(
       { error: "Failed to create note", details: error.message },

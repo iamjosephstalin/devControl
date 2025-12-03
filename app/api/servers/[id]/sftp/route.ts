@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db"
 import { listSFTPDirectory, readSFTPFile, writeSFTPFile, deleteSFTPFile, createSFTPDirectory } from "@/lib/sftp"
 import { decrypt } from "@/lib/encryption"
 
+
+export const runtime = 'nodejs'
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
