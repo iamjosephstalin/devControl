@@ -12,7 +12,10 @@ import {
   Star,
   Settings,
   Plus,
+  Code,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { formatDate } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { useState, useMemo } from "react"
@@ -25,6 +28,7 @@ import { CreateVersionControlDialog } from "@/components/integrations/create-ver
 import { RepositoryDetailsModal } from "@/components/version-control/repository-details-modal"
 
 export default function VersionControlPage() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<'repositories' | 'integrations'>('repositories')
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -105,10 +109,10 @@ export default function VersionControlPage() {
   // Filter repositories based on search term
   const filteredRepos = useMemo(() => {
     const allRepos = [...githubRepos, ...gitlabRepos, ...bitbucketRepos]
-    
+
     if (!searchTerm) return allRepos
-    
-    return allRepos.filter((repo: any) => 
+
+    return allRepos.filter((repo: any) =>
       repo.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       repo.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       repo.name_with_namespace?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -183,8 +187,8 @@ export default function VersionControlPage() {
           </div>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <CreateVersionControlDialog />
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setActiveTab(activeTab === "repositories" ? "integrations" : "repositories")}
               className="whitespace-nowrap"
             >
@@ -268,7 +272,7 @@ export default function VersionControlPage() {
                           </p>
                         </div>
                       )}
-                      
+
                       <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
                         <h4 className="text-sm font-semibold text-foreground">Repository Stats</h4>
                         <div className="grid grid-cols-2 gap-3 text-sm">
@@ -304,17 +308,51 @@ export default function VersionControlPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-3">
-                        <RepositoryDetailsModal 
-                          repository={repo} 
+                        <RepositoryDetailsModal
+                          repository={repo}
                           integration={gitIntegrations.find(i => i.name === repo.integration)}
                         >
                           <Button variant="outline" size="sm" className="w-full font-medium">
                             View Details
                           </Button>
                         </RepositoryDetailsModal>
-                        
+
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="font-medium"
+                          onClick={() => {
+                            const integration = gitIntegrations.find(i => i.name === repo.integration)
+                            if (integration) {
+                              toast.promise(
+                                fetch('/api/ide/workspaces', {
+                                  method: 'POST',
+                                  body: JSON.stringify({
+                                    repoUrl: repoData.url,
+                                    name: repoData.name,
+                                    integrationId: integration.id
+                                  })
+                                }).then(async res => {
+                                  if (!res.ok) throw new Error("Failed to open workspace")
+                                  return res.json()
+                                }),
+                                {
+                                  loading: 'Opening workspace...',
+                                  success: (data) => {
+                                    router.push(`/version-control/ide/${data.workspaceId}`)
+                                    return `Workspace ready`
+                                  },
+                                  error: 'Failed to open workspace'
+                                }
+                              )
+                            }
+                          }}
+                        >
+                          <Code className="mr-2 h-4 w-4" />
+                          Edit
+                        </Button>
                         <Button
                           variant="default"
                           size="sm"
